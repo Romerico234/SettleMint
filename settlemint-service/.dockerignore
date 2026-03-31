@@ -1,0 +1,14 @@
+.git
+.gitignore
+README.md
+.env
+.env.*
+!.env.example
+node_modules
+dist
+build
+tmp
+temp
+coverage
+.vscode
+.idea

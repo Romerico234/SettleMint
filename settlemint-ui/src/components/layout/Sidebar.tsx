@@ -7,7 +7,7 @@ type SidebarProps = {
   selectedTab: Tab;
   setSelectedTab: (tab: Tab) => void;
   cycles: Cycle[];
-  selectedCycle: Cycle;
+  selectedCycle: Cycle | null;
   setSelectedCycle: (cycle: Cycle) => void;
 };
 
@@ -73,27 +73,33 @@ export default function Sidebar({
         <div className="sidebar-section-label">Settlement Periods</div>
 
         <div className="sidebar-cycle-list">
-          {cycles.map((cycle) => {
-            const isSelected = selectedCycle.id === cycle.id;
+          {cycles.length > 0 ? (
+            cycles.map((cycle) => {
+              const isSelected = selectedCycle?.id === cycle.id;
 
-            return (
-              <button
-                key={cycle.id}
-                onClick={() => setSelectedCycle(cycle)}
-                className={`sidebar-cycle-button ${isSelected ? "active" : ""}`}
-              >
-                <div className="sidebar-cycle-button-top">
-                  <span>{cycle.name}</span>
-                  <span
-                    className={`pill ${cycle.status === "Active" ? "pill-active" : "pill-archived"}`}
-                  >
-                    {cycle.status}
-                  </span>
-                </div>
-                <div className="sidebar-cycle-date">{cycle.createdAt}</div>
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={cycle.id}
+                  onClick={() => setSelectedCycle(cycle)}
+                  className={`sidebar-cycle-button ${isSelected ? "active" : ""}`}
+                >
+                  <div className="sidebar-cycle-button-top">
+                    <span>{cycle.name}</span>
+                    <span
+                      className={`pill ${
+                        cycle.status === "Active" ? "pill-active" : "pill-archived"
+                      }`}
+                    >
+                      {cycle.status}
+                    </span>
+                  </div>
+                  <div className="sidebar-cycle-date">{cycle.createdAt}</div>
+                </button>
+              );
+            })
+          ) : (
+            <div className="empty-state">No settlement periods yet.</div>
+          )}
         </div>
       </div>
     </aside>

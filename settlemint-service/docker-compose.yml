@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  settlement-service:
+    build:
+      context: ./settlement-service
+      dockerfile: Dockerfile
+    container_name: settlement-service
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./settlement-service/.env
+    restart: unless-stopped

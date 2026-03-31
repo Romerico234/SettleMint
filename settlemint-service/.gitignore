@@ -1,0 +1,17 @@
+.DS_Store
+.vscode/
+.env
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+bin/
+vendor/
+go.work
+go.work.sum
+tmp/
+temp/
+*.tmp

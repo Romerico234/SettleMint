@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 import "./App.css";
 
-import { badgesSeed, cyclesSeed, expensesSeed, membersSeed, settlementsSeed } from "./shared/mock-data";
-import type { Cycle, Tab } from "./shared/types";
+import type { Cycle, Tab, Member, Expense, Settlement, Badge } from "./shared/types";
 
 import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
@@ -14,25 +13,29 @@ import ArchiveTab from "./components/archive/ArchiveTab";
 
 export default function App() {
   const [walletConnected, setWalletConnected] = useState(false);
-  const [selectedCycle, setSelectedCycle] = useState<Cycle>(cyclesSeed[0]);
   const [selectedTab, setSelectedTab] = useState<Tab>("Overview");
 
-  const activeMembers = membersSeed;
-  const activeExpenses = expensesSeed;
-  const activeSettlements = settlementsSeed;
-  const archivedCycles = cyclesSeed.filter((cycle) => cycle.status === "Archived");
+  const [cycles, setCycles] = useState<Cycle[]>([]);
+  const [selectedCycle, setSelectedCycle] = useState<Cycle | null>(null);
+
+  const [members, setMembers] = useState<Member[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [settlements, setSettlements] = useState<Settlement[]>([]);
+  const [badges, setBadges] = useState<Badge[]>([]);
+
+  const archivedCycles = cycles.filter((cycle) => cycle.status === "Archived");
 
   const totals = useMemo(() => {
-    const expenseTotal = activeExpenses.reduce((sum, item) => sum + item.amount, 0);
-    const pendingCount = activeSettlements.filter((s) => s.status === "Pending").length;
-    const verifiedCount = activeSettlements.filter((s) => s.status === "Verified").length;
+    const expenseTotal = expenses.reduce((sum, item) => sum + item.amount, 0);
+    const pendingCount = settlements.filter((s) => s.status === "Pending").length;
+    const verifiedCount = settlements.filter((s) => s.status === "Verified").length;
 
     return {
       expenseTotal,
       pendingCount,
       verifiedCount,
     };
-  }, [activeExpenses, activeSettlements]);
+  }, [expenses, settlements]);
 
   return (
     <div className="app-page">
@@ -45,7 +48,7 @@ export default function App() {
           onToggleWallet={() => setWalletConnected((prev) => !prev)}
           selectedTab={selectedTab}
           setSelectedTab={setSelectedTab}
-          cycles={cyclesSeed}
+          cycles={cycles}
           selectedCycle={selectedCycle}
           setSelectedCycle={setSelectedCycle}
         />
@@ -54,7 +57,7 @@ export default function App() {
           <Header />
 
           <HeroSection
-            members={activeMembers}
+            members={members}
             selectedCycle={selectedCycle}
             expenseTotal={totals.expenseTotal}
             pendingCount={totals.pendingCount}
@@ -62,17 +65,13 @@ export default function App() {
           />
 
           {selectedTab === "Overview" && (
-            <OverviewTab
-              members={activeMembers}
-              expenses={activeExpenses}
-              badges={badgesSeed}
-            />
+            <OverviewTab members={members} expenses={expenses} badges={badges} />
           )}
 
-          {selectedTab === "Expenses" && <ExpensesTab expenses={activeExpenses} />}
+          {selectedTab === "Expenses" && <ExpensesTab expenses={expenses} />}
 
           {selectedTab === "Settlement Plan" && (
-            <SettlementPlanTab settlements={activeSettlements} />
+            <SettlementPlanTab settlements={settlements} />
           )}
 
           {selectedTab === "Archive" && (
