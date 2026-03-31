@@ -21,29 +21,37 @@ export default function SettlementPlanTab({ settlements }: SettlementPlanTabProp
         </div>
 
         <div className="plan-list">
-          {settlements.map((settlement) => (
-            <div key={settlement.id} className="plan-card">
-              <div>
-                <div className="plan-title">
-                  {settlement.from} pays {settlement.to}
+          {settlements.length > 0 ? (
+            settlements.map((settlement) => (
+              <div key={settlement.id} className="plan-card">
+                <div>
+                  <div className="plan-title">
+                    {settlement.from} pays {settlement.to}
+                  </div>
+                  <div className="plan-meta">
+                    {settlement.status === "Verified" && settlement.txHash
+                      ? `Verified on-chain • ${shortHash(settlement.txHash)}`
+                      : "Awaiting payment and verification"}
+                  </div>
                 </div>
-                <div className="plan-meta">
-                  {settlement.status === "Verified"
-                    ? `Verified on-chain • ${shortHash(settlement.txHash)}`
-                    : "Awaiting payment and verification"}
-                </div>
-              </div>
 
-              <div className="plan-right">
-                <div className="plan-amount">${settlement.amount.toFixed(2)}</div>
-                <button
-                  className={`btn ${settlement.status === "Verified" ? "btn-secondary btn-small" : "btn-primary btn-small"}`}
-                >
-                  {settlement.status === "Verified" ? "View Proof" : "Pay Now"}
-                </button>
+                <div className="plan-right">
+                  <div className="plan-amount">${settlement.amount.toFixed(2)}</div>
+                  <button
+                    className={`btn ${
+                      settlement.status === "Verified"
+                        ? "btn-secondary btn-small"
+                        : "btn-primary btn-small"
+                    }`}
+                  >
+                    {settlement.status === "Verified" ? "View Proof" : "Pay Now"}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <div className="empty-state">No settlement plan generated yet.</div>
+          )}
         </div>
       </section>
 

@@ -1,3 +1,3 @@
 # SettleMint
 
-### By: Romerico, Mario Scotto, Rayquan Williams
+### By: Romerico David, Mario Scotto, Rayquan Williams

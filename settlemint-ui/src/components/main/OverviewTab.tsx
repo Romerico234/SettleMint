@@ -23,26 +23,30 @@ export default function OverviewTab({ members, expenses, badges }: OverviewTabPr
         </div>
 
         <div className="balance-list">
-          {members.map((member) => {
-            const positive = member.balance >= 0;
+          {members.length > 0 ? (
+            members.map((member) => {
+              const positive = member.balance >= 0;
 
-            return (
-              <div key={member.id} className="balance-card">
-                <div className="balance-card-left">
-                  <div className="avatar avatar-large">{member.avatar}</div>
-                  <div>
-                    <div className="balance-name">{member.name}</div>
-                    <div className="balance-wallet">{member.wallet}</div>
+              return (
+                <div key={member.id} className="balance-card">
+                  <div className="balance-card-left">
+                    <div className="avatar avatar-large">{member.avatar}</div>
+                    <div>
+                      <div className="balance-name">{member.name}</div>
+                      <div className="balance-wallet">{member.wallet}</div>
+                    </div>
+                  </div>
+
+                  <div className={`balance-amount ${positive ? "positive" : "negative"}`}>
+                    {positive ? "+" : "-"}
+                    {formatCurrency(member.balance)}
                   </div>
                 </div>
-
-                <div className={`balance-amount ${positive ? "positive" : "negative"}`}>
-                  {positive ? "+" : "-"}
-                  {formatCurrency(member.balance)}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })
+          ) : (
+            <div className="empty-state">No balances available.</div>
+          )}
         </div>
       </section>
 
@@ -56,20 +60,26 @@ export default function OverviewTab({ members, expenses, badges }: OverviewTabPr
         </div>
 
         <div className="expense-list">
-          {expenses.map((expense) => (
-            <div key={expense.id} className="expense-row">
-              <div>
-                <div className="expense-title">{expense.title}</div>
-                <div className="expense-meta">
-                  Paid by {expense.paidBy} • {expense.splitType} split • {expense.date}
+          {expenses.length > 0 ? (
+            expenses.map((expense) => (
+              <div key={expense.id} className="expense-row">
+                <div>
+                  <div className="expense-title">{expense.title}</div>
+                  <div className="expense-meta">
+                    Paid by {expense.paidBy} • {expense.splitType} split • {expense.date}
+                  </div>
+                </div>
+                <div className="expense-right">
+                  <div className="expense-amount">${expense.amount.toFixed(2)}</div>
+                  <div className="expense-participants">
+                    {expense.participants.join(", ")}
+                  </div>
                 </div>
               </div>
-              <div className="expense-right">
-                <div className="expense-amount">${expense.amount.toFixed(2)}</div>
-                <div className="expense-participants">{expense.participants.join(", ")}</div>
-              </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <div className="empty-state">No recent expenses.</div>
+          )}
         </div>
       </section>
 
@@ -84,13 +94,17 @@ export default function OverviewTab({ members, expenses, badges }: OverviewTabPr
         </div>
 
         <div className="badge-grid">
-          {badges.map((badge) => (
-            <div key={badge.id} className="badge-card">
-              <div className="badge-icon">{badge.icon}</div>
-              <div className="badge-name">{badge.name}</div>
-              <div className="badge-description">{badge.description}</div>
-            </div>
-          ))}
+          {badges.length > 0 ? (
+            badges.map((badge) => (
+              <div key={badge.id} className="badge-card">
+                <div className="badge-icon">{badge.icon}</div>
+                <div className="badge-name">{badge.name}</div>
+                <div className="badge-description">{badge.description}</div>
+              </div>
+            ))
+          ) : (
+            <div className="empty-state">No badges available.</div>
+          )}
         </div>
       </section>
     </div>

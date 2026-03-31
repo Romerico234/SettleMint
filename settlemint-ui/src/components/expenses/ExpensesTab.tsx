@@ -19,25 +19,6 @@ export default function ExpensesTab({ expenses }: ExpensesTabProps) {
           <button className="btn btn-primary">Add New Expense</button>
         </div>
 
-        <div className="form-mock-grid">
-          <div className="input-card">
-            <label className="input-label">Description</label>
-            <div className="input-mock">Dinner at Ocean Prime</div>
-          </div>
-          <div className="input-card">
-            <label className="input-label">Amount</label>
-            <div className="input-mock">$128.50</div>
-          </div>
-          <div className="input-card">
-            <label className="input-label">Paid By</label>
-            <div className="input-mock">Romerico</div>
-          </div>
-          <div className="input-card">
-            <label className="input-label">Split Method</label>
-            <div className="input-mock">Equal</div>
-          </div>
-        </div>
-
         <div className="expense-table">
           <div className="table-header">
             <span>Expense</span>
@@ -47,15 +28,21 @@ export default function ExpensesTab({ expenses }: ExpensesTabProps) {
             <span>Amount</span>
           </div>
 
-          {expenses.map((expense) => (
-            <div key={expense.id} className="table-row">
-              <span>{expense.title}</span>
-              <span>{expense.paidBy}</span>
-              <span>{expense.splitType}</span>
-              <span>{expense.date}</span>
-              <span>${expense.amount.toFixed(2)}</span>
+          {expenses.length > 0 ? (
+            expenses.map((expense) => (
+              <div key={expense.id} className="table-row">
+                <span>{expense.title}</span>
+                <span>{expense.paidBy}</span>
+                <span>{expense.splitType}</span>
+                <span>{expense.date}</span>
+                <span>${expense.amount.toFixed(2)}</span>
+              </div>
+            ))
+          ) : (
+            <div className="empty-state">
+              No expenses yet.
             </div>
-          ))}
+          )}
         </div>
       </section>
     </div>
