@@ -1,35 +1,85 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useMemo, useState } from "react";
+import "./App.css";
 
-function App() {
-  const [count, setCount] = useState(0)
+import { badgesSeed, cyclesSeed, expensesSeed, membersSeed, settlementsSeed } from "./shared/mock-data";
+import type { Cycle, Tab } from "./shared/types";
+
+import Sidebar from "./components/layout/Sidebar";
+import Header from "./components/layout/Header";
+import HeroSection from "./components/main/HeroSection";
+import OverviewTab from "./components/main/OverviewTab";
+import ExpensesTab from "./components/expenses/ExpensesTab";
+import SettlementPlanTab from "./components/settlement/SettlementPlanTab";
+import ArchiveTab from "./components/archive/ArchiveTab";
+
+export default function App() {
+  const [walletConnected, setWalletConnected] = useState(false);
+  const [selectedCycle, setSelectedCycle] = useState<Cycle>(cyclesSeed[0]);
+  const [selectedTab, setSelectedTab] = useState<Tab>("Overview");
+
+  const activeMembers = membersSeed;
+  const activeExpenses = expensesSeed;
+  const activeSettlements = settlementsSeed;
+  const archivedCycles = cyclesSeed.filter((cycle) => cycle.status === "Archived");
+
+  const totals = useMemo(() => {
+    const expenseTotal = activeExpenses.reduce((sum, item) => sum + item.amount, 0);
+    const pendingCount = activeSettlements.filter((s) => s.status === "Pending").length;
+    const verifiedCount = activeSettlements.filter((s) => s.status === "Verified").length;
+
+    return {
+      expenseTotal,
+      pendingCount,
+      verifiedCount,
+    };
+  }, [activeExpenses, activeSettlements]);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <div className="app-page">
+      <div className="app-glow app-glow-one" />
+      <div className="app-glow app-glow-two" />
 
-export default App
+      <div className="app-shell">
+        <Sidebar
+          walletConnected={walletConnected}
+          onToggleWallet={() => setWalletConnected((prev) => !prev)}
+          selectedTab={selectedTab}
+          setSelectedTab={setSelectedTab}
+          cycles={cyclesSeed}
+          selectedCycle={selectedCycle}
+          setSelectedCycle={setSelectedCycle}
+        />
+
+        <main className="app-main">
+          <Header />
+
+          <HeroSection
+            members={activeMembers}
+            selectedCycle={selectedCycle}
+            expenseTotal={totals.expenseTotal}
+            pendingCount={totals.pendingCount}
+            verifiedCount={totals.verifiedCount}
+          />
+
+          {selectedTab === "Overview" && (
+            <OverviewTab
+              members={activeMembers}
+              expenses={activeExpenses}
+              badges={badgesSeed}
+            />
+          )}
+
+          {selectedTab === "Expenses" && <ExpensesTab expenses={activeExpenses} />}
+
+          {selectedTab === "Settlement Plan" && (
+            <SettlementPlanTab settlements={activeSettlements} />
+          )}
+
+          {selectedTab === "Archive" && (
+            <ArchiveTab archivedCycles={archivedCycles} />
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
