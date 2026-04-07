@@ -2,63 +2,17 @@
 
 ## Architecture
 
-The backend is organized by sibling responsibilities, not by deep nesting.
-
 At the top level of the service:
 
-- `cmd`
-  - executable entrypoints
-- `internal`
-  - all application code
+- `cmd`: executable entrypoints
+- `internal`: all application code
 
-Inside `internal`, these directories are siblings at the same level:
+Inside `internal`:
+- `app`: composition root
+- `core`: grouped shared infrastructure
+- `modules`: feature modules grouped together
 
-- `app`
-  - composition root
-- `core`
-  - grouped shared infrastructure
-- `modules`
-  - feature modules grouped together
-
-So the structure is intentionally:
-
-```text
-settlemint-service/
-├── cmd/
-│   └── api/
-│       └── main.go
-└── internal/
-    ├── app/
-    │   ├── app.go
-    │   └── factory.go
-    ├── core/
-    │   ├── config/
-    │   │   └── config.go
-    │   ├── db/
-    │   │   ├── postgres_pool.go
-    │   │   └── schema_bootstrap.go
-    │   └── server/
-    │       ├── cors_middleware.go
-    │       ├── http_helpers.go
-    │       ├── http_router.go
-    │       └── README.md
-    └── modules/
-        ├── auth/
-        │   ├── auth_middleware.go
-        │   ├── auth_routehandler.go
-        │   ├── auth_service.go
-        │   └── auth_types.go
-        └── user/
-            ├── user_datastore.go
-            ├── user_routehandler.go
-            ├── user_service.go
-            └── user_types.go
-```
-
-The idea is:
-- `app` is the composition/orchestration concern
-- `core` groups shared infrastructure concerns like config, db, and server
-- `modules` contains business features
+The idea is: `app` is the composition/orchestration concern, `core` groups shared infrastructure concerns like config, db, and server, and `modules` contains business features.
 
 The current request flow is:
 
