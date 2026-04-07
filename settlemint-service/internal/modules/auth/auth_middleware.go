@@ -6,30 +6,34 @@ import (
 	"net/http"
 	"strings"
 
-	"settlement-service/internal/httpx"
+	"settlement-service/internal/core/server"
 )
 
 type contextKey string
 
 const userContextKey contextKey = "authenticated-user"
 
-func Middleware(authClient *SupabaseAuth) func(http.Handler) http.Handler {
+type TokenVerifier interface {
+	VerifyToken(ctx context.Context, token string) (User, error)
+}
+
+func Middleware(verifier TokenVerifier) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token, err := bearerTokenFromHeader(r.Header.Get("Authorization"))
 			if err != nil {
-				httpx.WriteError(w, http.StatusUnauthorized, err.Error())
+				server.WriteError(w, http.StatusUnauthorized, err.Error())
 				return
 			}
 
-			user, err := authClient.VerifyToken(r.Context(), token)
+			user, err := verifier.VerifyToken(r.Context(), token)
 			if err != nil {
 				status := http.StatusUnauthorized
 				if errors.Is(err, ErrMissingConfig) {
 					status = http.StatusInternalServerError
 				}
 
-				httpx.WriteError(w, status, err.Error())
+				server.WriteError(w, status, err.Error())
 				return
 			}
 

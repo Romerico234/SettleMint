@@ -1,9 +1,12 @@
-package httpx
+package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 )
+
+var ErrInvalidJSON = errors.New("invalid json body")
 
 func WriteJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
@@ -18,5 +21,12 @@ func WriteError(w http.ResponseWriter, status int, message string) {
 }
 
 func DecodeJSON(r *http.Request, dest any) error {
-	return json.NewDecoder(r.Body).Decode(dest)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(dest); err != nil {
+		return ErrInvalidJSON
+	}
+
+	return nil
 }

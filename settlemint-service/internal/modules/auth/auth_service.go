@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"settlement-service/internal/config"
+	"settlement-service/internal/core/config"
 )
 
 var (

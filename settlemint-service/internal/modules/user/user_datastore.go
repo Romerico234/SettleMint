@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"settlement-service/internal/auth"
+	"settlement-service/internal/modules/auth"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -16,7 +16,7 @@ type Store struct {
 	pool *pgxpool.Pool
 }
 
-func NewStore(pool *pgxpool.Pool) *Store {
+func NewDatastore(pool *pgxpool.Pool) *Store {
 	return &Store{pool: pool}
 }
 

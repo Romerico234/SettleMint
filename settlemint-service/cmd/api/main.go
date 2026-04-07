@@ -6,12 +6,15 @@ import (
 	"net/http"
 
 	"settlement-service/internal/app"
-	"settlement-service/internal/config"
-	"settlement-service/internal/server"
+	"settlement-service/internal/core/config"
+	"settlement-service/internal/core/server"
 )
 
 func main() {
 	cfg := config.Load()
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("invalid configuration: %v", err)
+	}
 
 	application, err := app.New(context.Background(), cfg)
 	if err != nil {
@@ -19,7 +22,7 @@ func main() {
 	}
 	defer application.Close()
 
-	router := server.NewRouter(application)
+	router := server.NewRouter(application.Config.CORSAllowedOrigin, application.Modules)
 
 	log.Printf("server running on port %s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, router); err != nil {
