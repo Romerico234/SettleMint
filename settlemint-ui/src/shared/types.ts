@@ -1,42 +1,40 @@
+export type Tab = "Overview" | "Expenses" | "Settlement Plan" | "Archive";
+
+export type CycleStatus = "Active" | "Archived";
+
+export type Cycle = {
+  id: string;
+  name: string;
+  status: CycleStatus;
+  createdAt: string;
+};
+
 export type Member = {
-    id: number;
-    name: string;
-    wallet: string;
-    avatar: string;
-    balance: number;
-  };
-  
-  export type Expense = {
-    id: number;
-    title: string;
-    amount: number;
-    paidBy: string;
-    splitType: "Equal" | "Custom" | "Percentage" | "Shares";
-    participants: string[];
-    date: string;
-  };
-  
-  export type Settlement = {
-    id: number;
-    from: string;
-    to: string;
-    amount: number;
-    status: "Pending" | "Verified";
-    txHash?: string;
-  };
-  
-  export type Cycle = {
-    id: number;
-    name: string;
-    status: "Active" | "Archived";
-    createdAt: string;
-  };
-  
-  export type Badge = {
-    id: number;
-    name: string;
-    description: string;
-    icon: string;
-  };
-  
-  export type Tab = "Overview" | "Expenses" | "Settlement Plan" | "Archive";
+  id: string;
+  name: string;
+  balance: number;
+};
+
+export type Expense = {
+  id: string;
+  description: string;
+  amount: number;
+  paidBy: string;
+  createdAt: string;
+};
+
+export type SettlementStatus = "Pending" | "Verified";
+
+export type Settlement = {
+  id: string;
+  from: string;
+  to: string;
+  amount: number;
+  status: SettlementStatus;
+};
+
+export type Badge = {
+  id: string;
+  name: string;
+  description: string;
+};

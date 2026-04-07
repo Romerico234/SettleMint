@@ -22,16 +22,16 @@
     letter-spacing: -0.03em;
   }
   
-  .page-subtitle {
+.page-subtitle {
     color: var(--muted);
     margin-top: 12px;
     font-size: 15px;
     max-width: 700px;
     line-height: 1.6;
   }
-  
-  .page-header-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
+
+.page-inline-error {
+    margin: 14px 0 0;
+    color: var(--danger);
+    font-size: 14px;
   }

@@ -1,5 +1,4 @@
 import type { Expense } from "../../shared/types";
-import "./ExpensesTab.css";
 
 type ExpensesTabProps = {
   expenses: Expense[];
@@ -7,44 +6,33 @@ type ExpensesTabProps = {
 
 export default function ExpensesTab({ expenses }: ExpensesTabProps) {
   return (
-    <div className="content-grid-single">
-      <section className="panel">
-        <div className="panel-header">
+    <section className="dashboard-grid dashboard-grid-body">
+      <article className="dashboard-card section-card section-card-full">
+        <div className="section-card-header">
           <div>
-            <h2 className="panel-title">Expense Ledger</h2>
-            <p className="panel-subtitle">
-              Record who paid, how much was spent, and how the cost should be split.
-            </p>
+            <h3 className="section-card-title">Expenses</h3>
+            <p className="section-card-copy">Track group spending in one place.</p>
           </div>
-          <button className="btn btn-primary">Add New Expense</button>
+          <button className="primary-chip" type="button">
+            Add Expense
+          </button>
         </div>
-
-        <div className="expense-table">
-          <div className="table-header">
-            <span>Expense</span>
-            <span>Paid By</span>
-            <span>Split</span>
-            <span>Date</span>
-            <span>Amount</span>
-          </div>
-
-          {expenses.length > 0 ? (
-            expenses.map((expense) => (
-              <div key={expense.id} className="table-row">
-                <span>{expense.title}</span>
-                <span>{expense.paidBy}</span>
-                <span>{expense.splitType}</span>
-                <span>{expense.date}</span>
-                <span>${expense.amount.toFixed(2)}</span>
+        {expenses.length > 0 ? (
+          <div className="simple-list">
+            {expenses.map((expense) => (
+              <div className="simple-row" key={expense.id}>
+                <div>
+                  <strong>{expense.description}</strong>
+                  <p className="row-copy">Paid by {expense.paidBy}</p>
+                </div>
+                <strong>${expense.amount.toFixed(2)}</strong>
               </div>
-            ))
-          ) : (
-            <div className="empty-state">
-              No expenses yet.
-            </div>
-          )}
-        </div>
-      </section>
-    </div>
+            ))}
+          </div>
+        ) : (
+          <p className="empty-copy">No expenses have been added yet.</p>
+        )}
+      </article>
+    </section>
   );
 }

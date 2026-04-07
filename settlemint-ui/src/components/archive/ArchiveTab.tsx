@@ -1,5 +1,4 @@
 import type { Cycle } from "../../shared/types";
-import "./ArchiveTab.css";
 
 type ArchiveTabProps = {
   archivedCycles: Cycle[];
@@ -7,59 +6,29 @@ type ArchiveTabProps = {
 
 export default function ArchiveTab({ archivedCycles }: ArchiveTabProps) {
   return (
-    <div className="content-grid">
-      <section className="panel">
-        <div className="panel-header">
+    <section className="dashboard-grid dashboard-grid-body">
+      <article className="dashboard-card section-card section-card-full">
+        <div className="section-card-header">
           <div>
-            <h2 className="panel-title">Archived Cycles</h2>
-            <p className="panel-subtitle">
-              Locked history with stored proof of settlement.
+            <h3 className="section-card-title">Archive</h3>
+            <p className="section-card-copy">
+              Closed settlement periods will live here with on-chain receipts.
             </p>
           </div>
         </div>
-
-        <div className="archive-list">
-          {archivedCycles.length > 0 ? (
-            archivedCycles.map((cycle) => (
-              <div key={cycle.id} className="archive-card">
-                <div>
-                  <div className="archive-title">{cycle.name}</div>
-                  <div className="archive-meta">
-                    Archived cycle • {cycle.createdAt}
-                  </div>
-                </div>
-                <div className="archive-actions">
-                  <button className="btn btn-secondary btn-small">
-                    View History
-                  </button>
-                  <button className="btn btn-ghost-muted btn-small">
-                    Export
-                  </button>
-                </div>
+        {archivedCycles.length > 0 ? (
+          <div className="simple-list">
+            {archivedCycles.map((cycle) => (
+              <div className="simple-row" key={cycle.id}>
+                <span>{cycle.name}</span>
+                <span>{cycle.createdAt}</span>
               </div>
-            ))
-          ) : (
-            <div className="empty-state">
-              No archived cycles yet.
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section className="panel">
-        <div className="panel-header">
-          <div>
-            <h2 className="panel-title">Verified Transactions</h2>
-            <p className="panel-subtitle">
-              Completed settlement proof will appear here once loaded from the backend.
-            </p>
+            ))}
           </div>
-        </div>
-
-        <div className="proof-card empty-state">
-          No verified transaction data available.
-        </div>
-      </section>
-    </div>
+        ) : (
+          <p className="empty-copy">No archived settlement periods yet.</p>
+        )}
+      </article>
+    </section>
   );
 }

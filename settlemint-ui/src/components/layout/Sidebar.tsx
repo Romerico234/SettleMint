@@ -1,9 +1,17 @@
+import { useEffect, useState } from "react";
 import type { Cycle, Tab } from "../../shared/types";
+import type { UserProfile } from "../../api/users";
 import "./Sidebar.css";
 
 type SidebarProps = {
   walletConnected: boolean;
-  onToggleWallet: () => void;
+  walletAddress: string | null;
+  walletLoading: boolean;
+  profile: UserProfile | null;
+  profileSaving: boolean;
+  onWalletAction: () => Promise<void>;
+  onDisconnect: () => Promise<void>;
+  onSaveProfile: (input: { displayName: string }) => Promise<void>;
   selectedTab: Tab;
   setSelectedTab: (tab: Tab) => void;
   cycles: Cycle[];
@@ -15,13 +23,31 @@ const tabs: Tab[] = ["Overview", "Expenses", "Settlement Plan", "Archive"];
 
 export default function Sidebar({
   walletConnected,
-  onToggleWallet,
+  walletAddress,
+  walletLoading,
+  profile,
+  profileSaving,
+  onWalletAction,
+  onDisconnect,
+  onSaveProfile,
   selectedTab,
   setSelectedTab,
   cycles,
   selectedCycle,
   setSelectedCycle,
 }: SidebarProps) {
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [displayNameDraft, setDisplayNameDraft] = useState("");
+
+  useEffect(() => {
+    setDisplayNameDraft(profile?.displayName || "");
+  }, [profile?.displayName]);
+
+  async function handleSaveDisplayName() {
+    await onSaveProfile({ displayName: displayNameDraft.trim() });
+    setIsEditingName(false);
+  }
+
   return (
     <aside className="sidebar">
       <div className="sidebar-brand-card">
@@ -63,9 +89,77 @@ export default function Sidebar({
             </span>
           </div>
 
-          <button className="btn btn-primary" onClick={onToggleWallet}>
-            {walletConnected ? "Disconnect Wallet" : "Connect Wallet"}
-          </button>
+          {walletConnected && (
+            <>
+              <div className="sidebar-display-name-row">
+                <div className="sidebar-display-name-copy">
+                  <div className="sidebar-display-name-label">Display Name</div>
+                  {!isEditingName && (
+                    <div className="sidebar-display-name-value">
+                      {profile?.displayName || "Add a display name"}
+                    </div>
+                  )}
+                </div>
+
+                {!isEditingName && (
+                  <button
+                    className="sidebar-inline-action"
+                    type="button"
+                    onClick={() => setIsEditingName(true)}
+                  >
+                    {profile?.displayName ? "Edit" : "Add"}
+                  </button>
+                )}
+              </div>
+
+              {isEditingName && (
+                <div className="sidebar-display-name-editor">
+                  <input
+                    className="sidebar-display-name-input"
+                    type="text"
+                    value={displayNameDraft}
+                    onChange={(event) => setDisplayNameDraft(event.target.value)}
+                    placeholder="Display name"
+                    maxLength={80}
+                  />
+                  <div className="sidebar-display-name-actions">
+                    <button
+                      className="sidebar-inline-action"
+                      type="button"
+                      onClick={() => {
+                        setDisplayNameDraft(profile?.displayName || "");
+                        setIsEditingName(false);
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="sidebar-inline-action sidebar-inline-action-primary"
+                      type="button"
+                      onClick={() => void handleSaveDisplayName()}
+                      disabled={profileSaving}
+                    >
+                      {profileSaving ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          <div className="sidebar-wallet-address">{walletAddress || "MetaMask wallet required"}</div>
+
+          {!walletConnected && (
+            <button className="btn btn-primary" onClick={() => void onWalletAction()} disabled={walletLoading}>
+              Connect Wallet
+            </button>
+          )}
+
+          {walletConnected && (
+            <button className="btn btn-secondary" onClick={() => void onDisconnect()} disabled={walletLoading}>
+              Sign out
+            </button>
+          )}
         </div>
       </div>
 
