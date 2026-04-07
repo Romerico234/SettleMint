@@ -1,0 +1,86 @@
+import type { Badge, Expense, Member } from "../../shared/types";
+
+type OverviewTabProps = {
+  members: Member[];
+  expenses: Expense[];
+  badges: Badge[];
+};
+
+export default function OverviewTab({ members, expenses, badges }: OverviewTabProps) {
+  return (
+    <section className="dashboard-grid dashboard-grid-body">
+      <article className="dashboard-card section-card">
+        <div className="section-card-header">
+          <div>
+            <h3 className="section-card-title">Running Balances</h3>
+            <p className="section-card-copy">
+              Positive means they are owed, negative means they owe.
+            </p>
+          </div>
+          <button className="ghost-button" type="button">
+            Refresh Balances
+          </button>
+        </div>
+        {members.length > 0 ? (
+          <div className="simple-list">
+            {members.map((member) => (
+              <div className="simple-row" key={member.id}>
+                <span>{member.name}</span>
+                <strong>{member.balance >= 0 ? "+" : "-"}${Math.abs(member.balance).toFixed(2)}</strong>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="empty-copy">No balances available.</p>
+        )}
+      </article>
+
+      <article className="dashboard-card section-card">
+        <div className="section-card-header">
+          <div>
+            <h3 className="section-card-title">Recent Expenses</h3>
+            <p className="section-card-copy">Shared costs inside the active cycle.</p>
+          </div>
+          <button className="primary-chip" type="button">
+            Add Expense
+          </button>
+        </div>
+        {expenses.length > 0 ? (
+          <div className="simple-list">
+            {expenses.map((expense) => (
+              <div className="simple-row" key={expense.id}>
+                <span>{expense.description}</span>
+                <strong>${expense.amount.toFixed(2)}</strong>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="empty-copy">No recent expenses.</p>
+        )}
+      </article>
+
+      <article className="dashboard-card section-card section-card-wide">
+        <div className="section-card-header">
+          <div>
+            <h3 className="section-card-title">Badge Progress</h3>
+            <p className="section-card-copy">
+              Optional on-chain achievements for engaged group members.
+            </p>
+          </div>
+        </div>
+        {badges.length > 0 ? (
+          <div className="simple-list">
+            {badges.map((badge) => (
+              <div className="simple-row" key={badge.id}>
+                <span>{badge.name}</span>
+                <span>{badge.description}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="empty-copy">No badges available.</p>
+        )}
+      </article>
+    </section>
+  );
+}
