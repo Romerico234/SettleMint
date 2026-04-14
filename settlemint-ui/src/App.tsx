@@ -155,6 +155,14 @@ export default function App() {
     }
   }
 
+  function handleCreateGroup() {
+    setAuthError("Create Group UI is restored, but the group creation flow has not been implemented yet.");
+  }
+
+  function handleCreateSettlementPeriod() {
+    setAuthError("Settlement period creation UI is restored, but the backend flow has not been implemented yet.");
+  }
+
   return (
     <div className="app-page">
       <div className="app-glow app-glow-one" />
@@ -178,7 +186,12 @@ export default function App() {
         />
 
         <main className="app-main">
-          <Header authError={authError} />
+          <Header
+            authError={authError}
+            actionsDisabled={!accessToken}
+            onCreateGroup={handleCreateGroup}
+            onCreateSettlementPeriod={handleCreateSettlementPeriod}
+          />
 
           <HeroSection
             members={members}
