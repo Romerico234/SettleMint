@@ -2,25 +2,36 @@ package auth
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
-	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
 	"settlemint-service/internal/core/config"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 var (
 	ErrMissingBearerToken = errors.New("missing bearer token")
 	ErrInvalidToken       = errors.New("invalid token")
-	ErrMissingConfig      = errors.New("supabase auth is not configured")
+	ErrMissingConfig      = errors.New("wallet auth is not configured")
+	ErrInvalidChallenge   = errors.New("invalid wallet challenge")
 	evmWalletPattern      = regexp.MustCompile(`^0x[a-fA-F0-9]{40}$`)
 )
+
+const challengeStatement = "Sign in to SettleMint with your wallet."
 
 type User struct {
 	ID            string `json:"id"`
@@ -29,169 +40,299 @@ type User struct {
 	WalletAddress string `json:"walletAddress"`
 }
 
-type rawUser struct {
-	ID         string `json:"id"`
-	Email      string `json:"email"`
-	Role       string `json:"role"`
-	Identities []struct {
-		Provider     string         `json:"provider"`
-		ProviderID   string         `json:"provider_id"`
-		IdentityData map[string]any `json:"identity_data"`
-	} `json:"identities"`
-	UserMetadata map[string]any `json:"user_metadata"`
+type challengeDocument struct {
+	Nonce         string    `bson:"nonce"`
+	WalletAddress string    `bson:"wallet_address"`
+	Domain        string    `bson:"domain"`
+	URI           string    `bson:"uri"`
+	ChainID       int       `bson:"chain_id"`
+	IssuedAt      time.Time `bson:"issued_at"`
+	ExpiresAt     time.Time `bson:"expires_at"`
 }
 
-type SupabaseAuth struct {
-	baseURL        string
-	publishableKey string
-	client         *http.Client
+type signedTokenPayload struct {
+	Sub           string `json:"sub"`
+	Role          string `json:"role"`
+	WalletAddress string `json:"walletAddress"`
+	Exp           int64  `json:"exp"`
 }
 
-func NewSupabaseAuth(cfg config.Config) *SupabaseAuth {
-	return &SupabaseAuth{
-		baseURL:        strings.TrimRight(cfg.SupabaseURL, "/"),
-		publishableKey: cfg.SupabasePublishableKey,
-		client: &http.Client{
-			Timeout: 5 * time.Second,
-		},
+type WalletAuth struct {
+	secret           []byte
+	nonceCollection  *mongo.Collection
+	challengeTimeout time.Duration
+	tokenTTL         time.Duration
+}
+
+func NewWalletAuth(cfg config.Config, database *mongo.Database) *WalletAuth {
+	return &WalletAuth{
+		secret:           []byte(cfg.AuthTokenSecret),
+		nonceCollection:  database.Collection("auth_nonces"),
+		challengeTimeout: 5 * time.Minute,
+		tokenTTL:         24 * time.Hour,
 	}
 }
 
-func (s *SupabaseAuth) IsConfigured() bool {
-	return s.baseURL != "" && s.publishableKey != ""
+func (s *WalletAuth) IsConfigured() bool {
+	return len(s.secret) > 0 && s.nonceCollection != nil
 }
 
-func (s *SupabaseAuth) VerifyToken(ctx context.Context, token string) (User, error) {
+func (s *WalletAuth) CreateChallenge(ctx context.Context, input ChallengeRequest) (ChallengeResponse, error) {
+	if !s.IsConfigured() {
+		return ChallengeResponse{}, ErrMissingConfig
+	}
+
+	walletAddress := normalizeWalletAddress(input.WalletAddress)
+	if walletAddress == "" {
+		return ChallengeResponse{}, errors.New("walletAddress must be a valid EVM address")
+	}
+	if strings.TrimSpace(input.Domain) == "" {
+		return ChallengeResponse{}, errors.New("domain is required")
+	}
+	if strings.TrimSpace(input.URI) == "" {
+		return ChallengeResponse{}, errors.New("uri is required")
+	}
+	if input.ChainID < 1 {
+		return ChallengeResponse{}, errors.New("chainId must be greater than 0")
+	}
+
+	now := time.Now().UTC().Truncate(time.Second)
+	nonce, err := generateNonce(16)
+	if err != nil {
+		return ChallengeResponse{}, fmt.Errorf("generate nonce: %w", err)
+	}
+
+	document := challengeDocument{
+		Nonce:         nonce,
+		WalletAddress: walletAddress,
+		Domain:        strings.TrimSpace(input.Domain),
+		URI:           strings.TrimSpace(input.URI),
+		ChainID:       input.ChainID,
+		IssuedAt:      now,
+		ExpiresAt:     now.Add(s.challengeTimeout),
+	}
+
+	if _, err := s.nonceCollection.InsertOne(ctx, document); err != nil {
+		return ChallengeResponse{}, fmt.Errorf("persist auth challenge: %w", err)
+	}
+
+	return ChallengeResponse{
+		Message:   formatChallengeMessage(document),
+		Nonce:     document.Nonce,
+		IssuedAt:  document.IssuedAt.Format(time.RFC3339),
+		ExpiresAt: document.ExpiresAt.Format(time.RFC3339),
+	}, nil
+}
+
+func (s *WalletAuth) VerifyWallet(ctx context.Context, input VerifyRequest) (VerifyResponse, error) {
+	if !s.IsConfigured() {
+		return VerifyResponse{}, ErrMissingConfig
+	}
+
+	walletAddress := normalizeWalletAddress(input.WalletAddress)
+	if walletAddress == "" {
+		return VerifyResponse{}, ErrInvalidChallenge
+	}
+
+	challenge, err := parseChallengeMessage(input.Message)
+	if err != nil {
+		return VerifyResponse{}, ErrInvalidChallenge
+	}
+	if challenge.WalletAddress != walletAddress {
+		return VerifyResponse{}, ErrInvalidChallenge
+	}
+
+	var stored challengeDocument
+	if err := s.nonceCollection.FindOne(ctx, bson.M{"nonce": challenge.Nonce}).Decode(&stored); err != nil {
+		return VerifyResponse{}, ErrInvalidChallenge
+	}
+	if time.Now().UTC().After(stored.ExpiresAt) {
+		_, _ = s.nonceCollection.DeleteOne(ctx, bson.M{"nonce": stored.Nonce})
+		return VerifyResponse{}, ErrInvalidChallenge
+	}
+	if formatChallengeMessage(stored) != strings.TrimSpace(input.Message) {
+		return VerifyResponse{}, ErrInvalidChallenge
+	}
+
+	recoveredAddress, err := recoverWalletAddress(input.Message, input.Signature)
+	if err != nil || recoveredAddress != walletAddress {
+		return VerifyResponse{}, ErrInvalidChallenge
+	}
+
+	_, _ = s.nonceCollection.DeleteOne(ctx, bson.M{"nonce": stored.Nonce})
+
+	user := User{
+		ID:            walletAddress,
+		Role:          "member",
+		WalletAddress: walletAddress,
+	}
+
+	token, err := s.signToken(user)
+	if err != nil {
+		return VerifyResponse{}, fmt.Errorf("sign token: %w", err)
+	}
+
+	return VerifyResponse{
+		Token: token,
+		User:  user,
+	}, nil
+}
+
+func (s *WalletAuth) VerifyToken(_ context.Context, token string) (User, error) {
 	if token == "" {
 		return User{}, ErrMissingBearerToken
 	}
-
 	if !s.IsConfigured() {
 		return User{}, ErrMissingConfig
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.baseURL+"/auth/v1/user", nil)
+	payload, err := s.parseToken(token)
 	if err != nil {
-		return User{}, fmt.Errorf("create auth request: %w", err)
-	}
-
-	req.Header.Set("apikey", s.publishableKey)
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	resp, err := s.client.Do(req)
-	if err != nil {
-		return User{}, fmt.Errorf("verify token with supabase: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
 		return User{}, ErrInvalidToken
 	}
 
-	var decoded rawUser
-	if err := json.NewDecoder(resp.Body).Decode(&decoded); err != nil {
-		return User{}, fmt.Errorf("decode supabase user: %w", err)
-	}
-
-	walletAddress := extractWalletAddress(decoded)
-	if walletAddress == "" {
-		walletAddress = extractWalletAddressFromToken(token)
-	}
-	if walletAddress == "" {
-		log.Printf(
-			"warning: could not derive wallet address from supabase user payload: user_id=%s providers=%v user_metadata_keys=%v",
-			decoded.ID,
-			identityProviders(decoded),
-			mapKeys(decoded.UserMetadata),
-		)
-	}
-
 	return User{
-		ID:            decoded.ID,
-		Email:         decoded.Email,
-		Role:          decoded.Role,
-		WalletAddress: walletAddress,
+		ID:            payload.Sub,
+		Role:          payload.Role,
+		WalletAddress: payload.WalletAddress,
 	}, nil
 }
 
-func extractWalletAddress(user rawUser) string {
-	identityCandidates := []string{"address", "wallet_address", "sub"}
-
-	for _, identity := range user.Identities {
-		if evmWalletPattern.MatchString(strings.TrimSpace(identity.ProviderID)) {
-			return strings.ToLower(strings.TrimSpace(identity.ProviderID))
-		}
-
-		for _, key := range identityCandidates {
-			value := strings.TrimSpace(fmt.Sprint(identity.IdentityData[key]))
-			if evmWalletPattern.MatchString(value) {
-				return strings.ToLower(value)
-			}
-		}
+func (s *WalletAuth) signToken(user User) (string, error) {
+	payload := signedTokenPayload{
+		Sub:           user.ID,
+		Role:          user.Role,
+		WalletAddress: user.WalletAddress,
+		Exp:           time.Now().UTC().Add(s.tokenTTL).Unix(),
 	}
 
-	metadataCandidates := []string{"wallet_address", "address"}
-	for _, key := range metadataCandidates {
-		value := strings.TrimSpace(fmt.Sprint(user.UserMetadata[key]))
-		if evmWalletPattern.MatchString(value) {
-			return strings.ToLower(value)
-		}
-	}
-
-	if value := findWalletAddressInValue(user.UserMetadata); value != "" {
-		return value
-	}
-
-	return ""
-}
-
-func extractWalletAddressFromToken(token string) string {
-	parts := strings.Split(token, ".")
-	if len(parts) < 2 {
-		return ""
-	}
-
-	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	encodedPayload, err := encodeTokenPart(payload)
 	if err != nil {
-		return ""
+		return "", err
 	}
 
-	var claims map[string]any
-	if err := json.Unmarshal(payload, &claims); err != nil {
-		return ""
-	}
+	mac := hmac.New(sha256.New, s.secret)
+	_, _ = mac.Write([]byte(encodedPayload))
+	signature := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 
-	return findWalletAddressInValue(claims)
+	return encodedPayload + "." + signature, nil
 }
 
-func findWalletAddressInValue(value any) string {
-	switch typed := value.(type) {
-	case map[string]any:
-		priorityKeys := []string{"wallet_address", "address", "provider_id"}
-		for _, key := range priorityKeys {
-			if raw, ok := typed[key]; ok {
-				if address := normalizeWalletAddress(raw); address != "" {
-					return address
-				}
-			}
-		}
-
-		for _, raw := range typed {
-			if address := findWalletAddressInValue(raw); address != "" {
-				return address
-			}
-		}
-	case []any:
-		for _, raw := range typed {
-			if address := findWalletAddressInValue(raw); address != "" {
-				return address
-			}
-		}
-	default:
-		return normalizeWalletAddress(typed)
+func (s *WalletAuth) parseToken(token string) (signedTokenPayload, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 2 {
+		return signedTokenPayload{}, ErrInvalidToken
 	}
 
-	return ""
+	mac := hmac.New(sha256.New, s.secret)
+	_, _ = mac.Write([]byte(parts[0]))
+	expectedSignature := mac.Sum(nil)
+
+	signature, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil || !hmac.Equal(signature, expectedSignature) {
+		return signedTokenPayload{}, ErrInvalidToken
+	}
+
+	var payload signedTokenPayload
+	if err := decodeTokenPart(parts[0], &payload); err != nil {
+		return signedTokenPayload{}, ErrInvalidToken
+	}
+	if payload.Exp <= time.Now().UTC().Unix() {
+		return signedTokenPayload{}, ErrInvalidToken
+	}
+	if normalizeWalletAddress(payload.WalletAddress) == "" || payload.Sub == "" {
+		return signedTokenPayload{}, ErrInvalidToken
+	}
+
+	return payload, nil
+}
+
+func formatChallengeMessage(challenge challengeDocument) string {
+	return fmt.Sprintf(`%s wants you to sign in with your Ethereum account:
+%s
+
+%s
+
+URI: %s
+Version: 1
+Chain ID: %d
+Nonce: %s
+Issued At: %s
+Expiration Time: %s`,
+		challenge.Domain,
+		challenge.WalletAddress,
+		challengeStatement,
+		challenge.URI,
+		challenge.ChainID,
+		challenge.Nonce,
+		challenge.IssuedAt.Format(time.RFC3339),
+		challenge.ExpiresAt.Format(time.RFC3339),
+	)
+}
+
+func parseChallengeMessage(message string) (challengeDocument, error) {
+	lines := strings.Split(strings.TrimSpace(message), "\n")
+	if len(lines) < 10 {
+		return challengeDocument{}, ErrInvalidChallenge
+	}
+
+	domain := strings.TrimSuffix(lines[0], " wants you to sign in with your Ethereum account:")
+	walletAddress := normalizeWalletAddress(lines[1])
+	if walletAddress == "" {
+		return challengeDocument{}, ErrInvalidChallenge
+	}
+
+	values := map[string]string{}
+	for _, line := range lines[5:] {
+		parts := strings.SplitN(line, ": ", 2)
+		if len(parts) == 2 {
+			values[parts[0]] = parts[1]
+		}
+	}
+
+	chainID, err := strconv.Atoi(values["Chain ID"])
+	if err != nil {
+		return challengeDocument{}, ErrInvalidChallenge
+	}
+	issuedAt, err := time.Parse(time.RFC3339, values["Issued At"])
+	if err != nil {
+		return challengeDocument{}, ErrInvalidChallenge
+	}
+	expiresAt, err := time.Parse(time.RFC3339, values["Expiration Time"])
+	if err != nil {
+		return challengeDocument{}, ErrInvalidChallenge
+	}
+
+	return challengeDocument{
+		Domain:        domain,
+		WalletAddress: walletAddress,
+		URI:           values["URI"],
+		ChainID:       chainID,
+		Nonce:         values["Nonce"],
+		IssuedAt:      issuedAt,
+		ExpiresAt:     expiresAt,
+	}, nil
+}
+
+func recoverWalletAddress(message string, signature string) (string, error) {
+	signatureBytes, err := hexutil.Decode(signature)
+	if err != nil {
+		return "", err
+	}
+	if len(signatureBytes) != crypto.SignatureLength {
+		return "", ErrInvalidChallenge
+	}
+	if signatureBytes[64] >= 27 {
+		signatureBytes[64] -= 27
+	}
+
+	messageHash := crypto.Keccak256Hash([]byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(message), message)))
+	publicKey, err := crypto.SigToPub(messageHash.Bytes(), signatureBytes)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.ToLower(crypto.PubkeyToAddress(*publicKey).Hex()), nil
 }
 
 func normalizeWalletAddress(value any) string {
@@ -199,22 +340,29 @@ func normalizeWalletAddress(value any) string {
 	if evmWalletPattern.MatchString(address) {
 		return strings.ToLower(address)
 	}
-
 	return ""
 }
 
-func identityProviders(user rawUser) []string {
-	providers := make([]string, 0, len(user.Identities))
-	for _, identity := range user.Identities {
-		providers = append(providers, identity.Provider)
+func generateNonce(numBytes int) (string, error) {
+	buffer := make([]byte, numBytes)
+	if _, err := rand.Read(buffer); err != nil {
+		return "", err
 	}
-	return providers
+	return hex.EncodeToString(buffer), nil
 }
 
-func mapKeys(input map[string]any) []string {
-	keys := make([]string, 0, len(input))
-	for key := range input {
-		keys = append(keys, key)
+func encodeTokenPart(value any) (string, error) {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return "", err
 	}
-	return keys
+	return base64.RawURLEncoding.EncodeToString(encoded), nil
+}
+
+func decodeTokenPart(input string, dest any) error {
+	decoded, err := base64.RawURLEncoding.DecodeString(input)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(decoded, dest)
 }

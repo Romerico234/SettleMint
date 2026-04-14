@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 )
 
@@ -15,14 +14,12 @@ const (
 )
 
 type Config struct {
-	AppEnv                 Environment
-	Port                   string
-	DatabaseURL            string
-	DatabaseMinConns       int32
-	DatabaseMaxConns       int32
-	SupabaseURL            string
-	SupabasePublishableKey string
-	CORSAllowedOrigin      string
+	AppEnv            Environment
+	Port              string
+	MongoURI          string
+	MongoDatabase     string
+	AuthTokenSecret   string
+	CORSAllowedOrigin string
 }
 
 func Load() Config {
@@ -39,14 +36,12 @@ func Load() Config {
 	}
 
 	return Config{
-		AppEnv:                 appEnv,
-		Port:                   port,
-		DatabaseURL:            os.Getenv("DATABASE_URL"),
-		DatabaseMinConns:       loadInt32Env("DB_MIN_CONNS", 1),
-		DatabaseMaxConns:       loadInt32Env("DB_MAX_CONNS", 5),
-		SupabaseURL:            os.Getenv("SUPABASE_URL"),
-		SupabasePublishableKey: os.Getenv("SUPABASE_PUBLISHABLE_KEY"),
-		CORSAllowedOrigin:      corsAllowedOrigin,
+		AppEnv:            appEnv,
+		Port:              port,
+		MongoURI:          loadMongoURI(appEnv),
+		MongoDatabase:     loadMongoDatabase(appEnv),
+		AuthTokenSecret:   loadAuthTokenSecret(appEnv),
+		CORSAllowedOrigin: corsAllowedOrigin,
 	}
 }
 
@@ -55,28 +50,20 @@ func (c Config) Validate() error {
 		return fmt.Errorf("APP_ENV must be %q or %q", EnvironmentDevelopment, EnvironmentProduction)
 	}
 
-	if c.DatabaseURL == "" {
-		return fmt.Errorf("DATABASE_URL is required")
+	if c.MongoURI == "" {
+		return fmt.Errorf("MONGODB_URI is required")
 	}
 
-	if c.DatabaseMinConns < 1 {
-		return fmt.Errorf("DB_MIN_CONNS must be at least 1")
+	if c.MongoDatabase == "" {
+		return fmt.Errorf("MONGODB_DATABASE is required")
 	}
 
-	if c.DatabaseMaxConns < c.DatabaseMinConns {
-		return fmt.Errorf("DB_MAX_CONNS must be greater than or equal to DB_MIN_CONNS")
+	if c.AuthTokenSecret == "" {
+		return fmt.Errorf("AUTH_TOKEN_SECRET is required")
 	}
 
-	if c.AppEnv == EnvironmentProduction {
-		if c.CORSAllowedOrigin == "" {
-			return fmt.Errorf("CORS_ALLOWED_ORIGIN is required in production")
-		}
-		if c.SupabaseURL == "" {
-			return fmt.Errorf("SUPABASE_URL is required in production")
-		}
-		if c.SupabasePublishableKey == "" {
-			return fmt.Errorf("SUPABASE_PUBLISHABLE_KEY is required in production")
-		}
+	if c.AppEnv == EnvironmentProduction && c.CORSAllowedOrigin == "" {
+		return fmt.Errorf("CORS_ALLOWED_ORIGIN is required in production")
 	}
 
 	return nil
@@ -99,16 +86,41 @@ func loadEnvironment() Environment {
 	return Environment(raw)
 }
 
-func loadInt32Env(key string, fallback int32) int32 {
-	value := os.Getenv(key)
-	if value == "" {
-		return fallback
+func loadMongoURI(appEnv Environment) string {
+	value := strings.TrimSpace(os.Getenv("MONGODB_URI"))
+	if value != "" {
+		return value
 	}
 
-	parsed, err := strconv.ParseInt(value, 10, 32)
-	if err != nil {
-		return fallback
+	if appEnv == EnvironmentDevelopment {
+		return "mongodb://localhost:27017"
 	}
 
-	return int32(parsed)
+	return ""
+}
+
+func loadMongoDatabase(appEnv Environment) string {
+	value := strings.TrimSpace(os.Getenv("MONGODB_DATABASE"))
+	if value != "" {
+		return value
+	}
+
+	if appEnv == EnvironmentDevelopment {
+		return "settlemint_dev"
+	}
+
+	return ""
+}
+
+func loadAuthTokenSecret(appEnv Environment) string {
+	value := strings.TrimSpace(os.Getenv("AUTH_TOKEN_SECRET"))
+	if value != "" {
+		return value
+	}
+
+	if appEnv == EnvironmentDevelopment {
+		return "settlemint-dev-secret-change-me"
+	}
+
+	return ""
 }

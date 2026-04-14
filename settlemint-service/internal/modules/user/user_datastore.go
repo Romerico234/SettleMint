@@ -8,74 +8,84 @@ import (
 
 	"settlemint-service/internal/modules/auth"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 type Store struct {
-	pool *pgxpool.Pool
+	collection *mongo.Collection
 }
 
-func NewDatastore(pool *pgxpool.Pool) *Store {
-	return &Store{pool: pool}
+func NewDatastore(database *mongo.Database) *Store {
+	return &Store{
+		collection: database.Collection("user_profiles"),
+	}
 }
 
 func (s *Store) EnsureProfile(ctx context.Context, user auth.User) (Profile, error) {
-	const query = `
-		INSERT INTO user_profiles (id, wallet_address)
-		VALUES ($1, NULLIF($2, ''))
-		ON CONFLICT (id) DO UPDATE
-		SET wallet_address = COALESCE(EXCLUDED.wallet_address, user_profiles.wallet_address),
-		    updated_at = NOW()
-		RETURNING id, COALESCE(display_name, ''), COALESCE(wallet_address, ''), created_at, updated_at;
-	`
+	now := time.Now().UTC()
+	update := bson.M{
+		"$setOnInsert": bson.M{
+			"_id":          user.ID,
+			"display_name": "",
+			"created_at":   now,
+		},
+		"$set": bson.M{
+			"updated_at": now,
+		},
+	}
 
-	return scanProfile(s.pool.QueryRow(ctx, query, user.ID, user.WalletAddress))
+	if walletAddress := strings.TrimSpace(user.WalletAddress); walletAddress != "" {
+		update["$set"].(bson.M)["wallet_address"] = walletAddress
+	}
+
+	return s.upsertProfile(ctx, user.ID, update)
 }
 
 func (s *Store) UpsertProfile(ctx context.Context, authUser auth.User, input UpdateProfileRequest) (Profile, error) {
-	const query = `
-		INSERT INTO user_profiles (id, display_name, wallet_address)
-		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''))
-		ON CONFLICT (id) DO UPDATE
-		SET display_name = EXCLUDED.display_name,
-		    wallet_address = COALESCE(EXCLUDED.wallet_address, user_profiles.wallet_address),
-		    updated_at = NOW()
-		RETURNING id, COALESCE(display_name, ''), COALESCE(wallet_address, ''), created_at, updated_at;
-	`
-
-	return scanProfile(s.pool.QueryRow(
-		ctx,
-		query,
-		authUser.ID,
-		strings.TrimSpace(input.DisplayName),
-		authUser.WalletAddress,
-	))
-}
-
-func scanProfile(row pgx.Row) (Profile, error) {
-	var (
-		profile       Profile
-		displayName   string
-		walletAddress string
-		createdAt     time.Time
-		updatedAt     time.Time
-	)
-
-	if err := row.Scan(
-		&profile.ID,
-		&displayName,
-		&walletAddress,
-		&createdAt,
-		&updatedAt,
-	); err != nil {
-		return Profile{}, fmt.Errorf("scan profile: %w", err)
+	now := time.Now().UTC()
+	update := bson.M{
+		"$setOnInsert": bson.M{
+			"_id":        authUser.ID,
+			"created_at": now,
+		},
+		"$set": bson.M{
+			"display_name": strings.TrimSpace(input.DisplayName),
+			"updated_at":   now,
+		},
 	}
 
-	profile.DisplayName = displayName
-	profile.WalletAddress = walletAddress
-	profile.CreatedAt = createdAt
-	profile.UpdatedAt = updatedAt
+	if walletAddress := strings.TrimSpace(authUser.WalletAddress); walletAddress != "" {
+		update["$set"].(bson.M)["wallet_address"] = walletAddress
+	}
 
-	return profile, nil
+	return s.upsertProfile(ctx, authUser.ID, update)
+}
+
+func (s *Store) upsertProfile(ctx context.Context, id string, update bson.M) (Profile, error) {
+	var document struct {
+		ID            string    `bson:"_id"`
+		DisplayName   string    `bson:"display_name"`
+		WalletAddress string    `bson:"wallet_address"`
+		CreatedAt     time.Time `bson:"created_at"`
+		UpdatedAt     time.Time `bson:"updated_at"`
+	}
+
+	if err := s.collection.FindOneAndUpdate(
+		ctx,
+		bson.M{"_id": id},
+		update,
+		options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After),
+	).Decode(&document); err != nil {
+		return Profile{}, fmt.Errorf("upsert profile: %w", err)
+	}
+
+	return Profile{
+		ID:            document.ID,
+		DisplayName:   document.DisplayName,
+		WalletAddress: document.WalletAddress,
+		CreatedAt:     document.CreatedAt,
+		UpdatedAt:     document.UpdatedAt,
+	}, nil
 }

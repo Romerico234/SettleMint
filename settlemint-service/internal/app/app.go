@@ -9,40 +9,37 @@ import (
 	"settlemint-service/internal/core/server"
 	"settlemint-service/internal/modules/auth"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type App struct {
 	Config       config.Config
-	DB           *pgxpool.Pool
+	DB           *mongo.Database
+	MongoClient  *mongo.Client
 	AuthVerifier auth.TokenVerifier
 	Modules      []server.RouteModule
 }
 
 func New(ctx context.Context, cfg config.Config) (*App, error) {
-	pool, err := db.NewPostgresPool(cfg)
+	client, database, err := db.NewMongoDB(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("connect database: %w", err)
 	}
 
-	if err := db.EnsureSchema(ctx, pool); err != nil {
-		pool.Close()
-		return nil, fmt.Errorf("ensure schema: %w", err)
-	}
-
-	factory := NewFactory(cfg, pool)
+	factory := NewFactory(cfg, database)
 	authVerifier, modules := factory.BuildModules()
 
 	return &App{
 		Config:       cfg,
-		DB:           pool,
+		DB:           database,
+		MongoClient:  client,
 		AuthVerifier: authVerifier,
 		Modules:      modules,
 	}, nil
 }
 
 func (a *App) Close() {
-	if a.DB != nil {
-		a.DB.Close()
+	if a.MongoClient != nil {
+		_ = a.MongoClient.Disconnect(context.Background())
 	}
 }
