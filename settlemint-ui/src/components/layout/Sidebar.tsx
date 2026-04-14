@@ -164,7 +164,7 @@ export default function Sidebar({
       </div>
 
       <div className="sidebar-section">
-        <div className="sidebar-section-label">Settlement Periods</div>
+        <div className="sidebar-section-label">Settlement Cycles</div>
 
         <div className="sidebar-cycle-list">
           {cycles.length > 0 ? (
@@ -192,7 +192,7 @@ export default function Sidebar({
               );
             })
           ) : (
-            <div className="empty-state">No settlement periods yet.</div>
+            <div className="empty-state">No Settlement Cycles yet.</div>
           )}
         </div>
       </div>

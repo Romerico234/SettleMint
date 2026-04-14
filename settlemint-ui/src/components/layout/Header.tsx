@@ -2,9 +2,17 @@ import "./Header.css";
 
 type HeaderProps = {
   authError: string | null;
+  actionsDisabled?: boolean;
+  onCreateGroup?: () => void;
+  onCreateSettlementPeriod?: () => void;
 };
 
-export default function Header({ authError }: HeaderProps) {
+export default function Header({
+  authError,
+  actionsDisabled = false,
+  onCreateGroup,
+  onCreateSettlementPeriod,
+}: HeaderProps) {
   return (
     <header className="page-header">
       <div>
@@ -16,6 +24,25 @@ export default function Header({ authError }: HeaderProps) {
         </p>
 
         {authError && <p className="page-inline-error">{authError}</p>}
+      </div>
+
+      <div className="page-header-actions">
+        <button
+          className="btn btn-secondary"
+          type="button"
+          onClick={onCreateGroup}
+          disabled={actionsDisabled}
+        >
+          Create Group
+        </button>
+        <button
+          className="btn btn-primary"
+          type="button"
+          onClick={onCreateSettlementPeriod}
+          disabled={actionsDisabled}
+        >
+          New Settlement Cycle
+        </button>
       </div>
     </header>
   );

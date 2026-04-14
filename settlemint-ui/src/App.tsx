@@ -10,22 +10,24 @@ import OverviewTab from "./components/main/OverviewTab";
 import ExpensesTab from "./components/expenses/ExpensesTab";
 import SettlementPlanTab from "./components/settlement/SettlementPlanTab";
 import ArchiveTab from "./components/archive/ArchiveTab";
-import { fetchAuthenticatedUser } from "./api/client";
-import { fetchMyProfile, updateMyProfile } from "./api/users";
-import { isSupabaseConfigured, supabase } from "./lib/supabase";
 import {
-  createSiweMessage,
+  createAuthChallenge,
+  fetchAuthenticatedUser,
+  verifyWalletSignature,
+} from "./api/auth";
+import { fetchMyProfile, updateMyProfile } from "./api/users";
+import { clearAuthToken, getAuthToken, setAuthToken } from "./lib/auth";
+import {
   getExistingConnectedEthereumWallet,
   getWalletChainId,
   requestWalletAccess,
   signMessage,
 } from "./lib/wallet";
-import type { Session } from "@supabase/supabase-js";
 import type { UserProfile } from "./api/users";
 
 export default function App() {
   const [selectedTab, setSelectedTab] = useState<Tab>("Overview");
-  const [session, setSession] = useState<Session | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(() => getAuthToken());
   const [connectedWalletAddress, setConnectedWalletAddress] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileSaving, setProfileSaving] = useState(false);
@@ -41,8 +43,7 @@ export default function App() {
   const [badges] = useState<Badge[]>([]);
 
   const archivedCycles = cycles.filter((cycle) => cycle.status === "Archived");
-  const authenticatedWalletAddress =
-    profile?.walletAddress || session?.user?.identities?.[0]?.identity_data?.address || null;
+  const authenticatedWalletAddress = profile?.walletAddress || connectedWalletAddress;
   const walletAddress = authenticatedWalletAddress || connectedWalletAddress;
 
   const totals = useMemo(() => {
@@ -58,46 +59,8 @@ export default function App() {
   }, [expenses, settlements]);
 
   useEffect(() => {
-    if (!isSupabaseConfigured) {
-      return;
-    }
-
-    let mounted = true;
-
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (!mounted) {
-        return;
-      }
-
-      if (error) {
-        setAuthError(error.message);
-        return;
-      }
-
-      setSession(data.session);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (!mounted) {
-        return;
-      }
-
-      setSession(nextSession);
-      setAuthError(null);
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!session?.access_token) {
+    if (!accessToken) {
       setProfile(null);
-      setConnectedWalletAddress(null);
       return;
     }
 
@@ -120,69 +83,60 @@ export default function App() {
     return () => {
       mounted = false;
     };
-  }, [session?.access_token]);
+  }, [accessToken]);
 
   async function handleWalletSignIn() {
-    if (session?.access_token && authenticatedWalletAddress) {
+    if (accessToken && authenticatedWalletAddress) {
       return;
     }
 
     setAuthLoading(true);
     setAuthError(null);
 
-    const wallet =
-      (await getExistingConnectedEthereumWallet()) ||
-      (await requestWalletAccess());
+    try {
+      const wallet =
+        (await getExistingConnectedEthereumWallet()) ||
+        (await requestWalletAccess());
 
-    if (!wallet) {
+      if (!wallet) {
+        setAuthError("MetaMask or another Ethereum wallet was not detected in this browser.");
+        return;
+      }
+
+      setConnectedWalletAddress(wallet.address);
+
+      const chainId = await getWalletChainId(wallet);
+      const challenge = await createAuthChallenge({
+        walletAddress: wallet.address,
+        domain: window.location.host,
+        uri: window.location.origin,
+        chainId,
+      });
+      const signature = await signMessage(wallet, wallet.address, challenge.message);
+      const result = await verifyWalletSignature({
+        walletAddress: wallet.address,
+        message: challenge.message,
+        signature,
+      });
+
+      setAuthToken(result.token);
+      setAccessToken(result.token);
+      setAuthError(null);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Failed to sign in with wallet");
+    } finally {
       setAuthLoading(false);
-      setAuthError("MetaMask or another Ethereum wallet was not detected in this browser.");
-      return;
     }
-
-    setConnectedWalletAddress(wallet.address);
-
-    const chainId = await getWalletChainId(wallet);
-    const message = createSiweMessage({
-      domain: window.location.host,
-      address: wallet.address,
-      uri: window.location.origin,
-      chainId,
-      statement: "Sign in to SettleMint with your wallet.",
-    });
-    const signature = await signMessage(wallet, wallet.address, message);
-
-    const { error } = await supabase.auth.signInWithWeb3({
-      chain: "ethereum",
-      message,
-      signature,
-    });
-
-    setAuthLoading(false);
-
-    if (error) {
-      setAuthError(error.message);
-      return;
-    }
-
-    setAuthError(null);
   }
 
   async function handleSignOut() {
     setAuthLoading(true);
     setAuthError(null);
-
-    const { error } = await supabase.auth.signOut();
-
-    setAuthLoading(false);
-
-    if (error) {
-      setAuthError(error.message);
-      return;
-    }
-
+    clearAuthToken();
+    setAccessToken(null);
     setProfile(null);
     setConnectedWalletAddress(null);
+    setAuthLoading(false);
   }
 
   async function handleSaveProfile(input: {
@@ -199,6 +153,14 @@ export default function App() {
     } finally {
       setProfileSaving(false);
     }
+  }
+
+  function handleCreateGroup() {
+    setAuthError("Create Group UI is restored, but the group creation flow has not been implemented yet.");
+  }
+
+  function handleCreateSettlementPeriod() {
+    setAuthError("Settlement Cycle creation UI is restored, but the backend flow has not been implemented yet.");
   }
 
   return (
@@ -224,7 +186,12 @@ export default function App() {
         />
 
         <main className="app-main">
-          <Header authError={authError} />
+          <Header
+            authError={authError}
+            actionsDisabled={!accessToken}
+            onCreateGroup={handleCreateGroup}
+            onCreateSettlementPeriod={handleCreateSettlementPeriod}
+          />
 
           <HeroSection
             members={members}

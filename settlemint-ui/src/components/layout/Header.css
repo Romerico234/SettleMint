@@ -35,3 +35,14 @@
     color: var(--danger);
     font-size: 14px;
   }
+
+.page-header-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+.page-header-actions .btn {
+    white-space: nowrap;
+  }

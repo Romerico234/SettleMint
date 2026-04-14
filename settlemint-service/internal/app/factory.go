@@ -6,23 +6,23 @@ import (
 	"settlemint-service/internal/modules/auth"
 	"settlemint-service/internal/modules/user"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type Factory struct {
 	config config.Config
-	db     *pgxpool.Pool
+	db     *mongo.Database
 }
 
-func NewFactory(cfg config.Config, pool *pgxpool.Pool) Factory {
+func NewFactory(cfg config.Config, database *mongo.Database) Factory {
 	return Factory{
 		config: cfg,
-		db:     pool,
+		db:     database,
 	}
 }
 
 func (f Factory) BuildModules() (auth.TokenVerifier, []server.RouteModule) {
-	authVerifier := auth.NewSupabaseAuth(f.config)
+	authVerifier := auth.NewWalletAuth(f.config, f.db)
 	userDatastore := user.NewDatastore(f.db)
 
 	return authVerifier, []server.RouteModule{

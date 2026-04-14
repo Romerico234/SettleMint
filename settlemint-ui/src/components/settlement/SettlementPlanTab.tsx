@@ -12,7 +12,7 @@ export default function SettlementPlanTab({ settlements }: SettlementPlanTabProp
           <div>
             <h3 className="section-card-title">Settlement Plan</h3>
             <p className="section-card-copy">
-              The minimal repayment plan for the current cycle will appear here.
+              The minimal repayment plan for the current Settlement Cycle will appear here.
             </p>
           </div>
         </div>
