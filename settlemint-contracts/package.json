@@ -1,0 +1,17 @@
+{
+  "name": "settlemint-contracts",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "build": "hardhat compile",
+    "clean": "hardhat clean",
+    "test": "hardhat test"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.15.3",
+    "hardhat": "^2.22.18",
+    "typescript": "^5.8.2"
+  }
+}
