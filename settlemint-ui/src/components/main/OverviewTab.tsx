@@ -39,7 +39,7 @@ export default function OverviewTab({ members, expenses, badges }: OverviewTabPr
         <div className="section-card-header">
           <div>
             <h3 className="section-card-title">Recent Expenses</h3>
-            <p className="section-card-copy">Shared costs inside the active cycle.</p>
+            <p className="section-card-copy">Shared costs inside the active Settlement Cycle.</p>
           </div>
           <button className="primary-chip" type="button">
             Add Expense

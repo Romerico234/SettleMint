@@ -12,7 +12,7 @@ export default function ArchiveTab({ archivedCycles }: ArchiveTabProps) {
           <div>
             <h3 className="section-card-title">Archive</h3>
             <p className="section-card-copy">
-              Closed settlement periods will live here with on-chain receipts.
+              Closed Settlement Cycles will live here with on-chain receipts.
             </p>
           </div>
         </div>
@@ -26,7 +26,7 @@ export default function ArchiveTab({ archivedCycles }: ArchiveTabProps) {
             ))}
           </div>
         ) : (
-          <p className="empty-copy">No archived settlement periods yet.</p>
+          <p className="empty-copy">No archived Settlement Cycles yet.</p>
         )}
       </article>
     </section>

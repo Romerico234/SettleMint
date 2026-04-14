@@ -160,7 +160,7 @@ export default function App() {
   }
 
   function handleCreateSettlementPeriod() {
-    setAuthError("Settlement period creation UI is restored, but the backend flow has not been implemented yet.");
+    setAuthError("Settlement Cycle creation UI is restored, but the backend flow has not been implemented yet.");
   }
 
   return (

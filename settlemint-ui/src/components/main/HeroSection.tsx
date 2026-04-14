@@ -36,7 +36,7 @@ export default function HeroSection({
           <div>
             <div className="stat-card-label">Current Group</div>
             <h2 className="highlight-card-title">
-              {selectedCycle?.name || "No active settlement period"}
+              {selectedCycle?.name || "No active Settlement Cycle"}
             </h2>
           </div>
           <div className="member-pill">
@@ -46,15 +46,15 @@ export default function HeroSection({
         </div>
         <p className="highlight-card-caption">
           {members.length > 0
-            ? "Balances and activity will update inside the active settlement period."
+            ? "Balances and activity will update inside the active Settlement Cycle."
             : "No group members loaded."}
         </p>
       </article>
 
       <StatCard
-        label="Cycle Total"
+        label="Settlement Cycle Total"
         value={`$${expenseTotal.toFixed(2)}`}
-        caption="No active settlement period selected"
+        caption="No active Settlement Cycle selected"
       />
       <StatCard
         label="Pending Settlements"

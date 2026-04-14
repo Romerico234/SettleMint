@@ -41,7 +41,7 @@ export default function Header({
           onClick={onCreateSettlementPeriod}
           disabled={actionsDisabled}
         >
-          New Settlement Period
+          New Settlement Cycle
         </button>
       </div>
     </header>
