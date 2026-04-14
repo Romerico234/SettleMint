@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"settlement-service/internal/core/server"
-	"settlement-service/internal/modules/auth"
+	"settlemint-service/internal/core/server"
+	"settlemint-service/internal/modules/auth"
 
 	"github.com/go-chi/chi/v5"
 )

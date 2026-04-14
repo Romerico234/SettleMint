@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"settlement-service/internal/core/config"
-	"settlement-service/internal/core/db"
-	"settlement-service/internal/core/server"
-	"settlement-service/internal/modules/auth"
+	"settlemint-service/internal/core/config"
+	"settlemint-service/internal/core/db"
+	"settlemint-service/internal/core/server"
+	"settlemint-service/internal/modules/auth"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )

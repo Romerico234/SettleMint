@@ -5,9 +5,9 @@ import (
 	"log"
 	"net/http"
 
-	"settlement-service/internal/app"
-	"settlement-service/internal/core/config"
-	"settlement-service/internal/core/server"
+	"settlemint-service/internal/app"
+	"settlemint-service/internal/core/config"
+	"settlemint-service/internal/core/server"
 )
 
 func main() {

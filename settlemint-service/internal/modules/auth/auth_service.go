@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"settlement-service/internal/core/config"
+	"settlemint-service/internal/core/config"
 )
 
 var (

@@ -1,4 +1,4 @@
-module settlement-service
+module settlemint-service
 
 go 1.25.0
 

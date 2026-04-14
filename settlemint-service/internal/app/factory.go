@@ -1,10 +1,10 @@
 package app
 
 import (
-	"settlement-service/internal/core/config"
-	"settlement-service/internal/core/server"
-	"settlement-service/internal/modules/auth"
-	"settlement-service/internal/modules/user"
+	"settlemint-service/internal/core/config"
+	"settlemint-service/internal/core/server"
+	"settlemint-service/internal/modules/auth"
+	"settlemint-service/internal/modules/user"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )

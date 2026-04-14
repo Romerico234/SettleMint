@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"settlement-service/internal/core/server"
+	"settlemint-service/internal/core/server"
 )
 
 type contextKey string

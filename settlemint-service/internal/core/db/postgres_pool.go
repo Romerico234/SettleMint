@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"settlement-service/internal/core/config"
+	"settlemint-service/internal/core/config"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )

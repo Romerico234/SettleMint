@@ -3,7 +3,7 @@ package user
 import (
 	"context"
 
-	"settlement-service/internal/modules/auth"
+	"settlemint-service/internal/modules/auth"
 )
 
 type Service struct {

@@ -3,7 +3,7 @@ package auth
 import (
 	"net/http"
 
-	"settlement-service/internal/core/server"
+	"settlemint-service/internal/core/server"
 
 	"github.com/go-chi/chi/v5"
 )

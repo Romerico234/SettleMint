@@ -1,9 +1,9 @@
 services:
-  settlement-service:
+  settlemint-service:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: settlement-service
+    container_name: settlemint-service
     ports:
       - "8080:8080"
     env_file:
