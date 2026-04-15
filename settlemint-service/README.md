@@ -45,8 +45,8 @@ This keeps the backend consistent as more domains are added.
 The service uses MongoDB.
 
 Environment Split:
-- local development: `settlemint_dev`
-- production: `settlemint_prod`
+- local development: `settlemint_db_dev`
+- production: `settlemint_db_prod`
 
 For development, using local Docker Mongo is enough. You do not need a hosted dev cluster unless your team wants a shared remote environment.
 

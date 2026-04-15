@@ -4,6 +4,7 @@ type HeaderProps = {
   authError: string | null;
   actionsDisabled?: boolean;
   onCreateGroup?: () => void;
+  onJoinGroup?: () => void;
   onCreateSettlementPeriod?: () => void;
 };
 
@@ -11,6 +12,7 @@ export default function Header({
   authError,
   actionsDisabled = false,
   onCreateGroup,
+  onJoinGroup,
   onCreateSettlementPeriod,
 }: HeaderProps) {
   return (
@@ -34,6 +36,14 @@ export default function Header({
           disabled={actionsDisabled}
         >
           Create Group
+        </button>
+        <button
+          className="btn btn-secondary"
+          type="button"
+          onClick={onJoinGroup}
+          disabled={actionsDisabled}
+        >
+          Join Group
         </button>
         <button
           className="btn btn-primary"

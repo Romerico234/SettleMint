@@ -75,5 +75,40 @@ func EnsureCollections(ctx context.Context, database *mongo.Database) error {
 		return fmt.Errorf("create auth_nonces indexes: %w", err)
 	}
 
+	groups := database.Collection("groups")
+
+	_, err = groups.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{
+			Keys:    bson.D{{Key: "owner_wallet", Value: 1}},
+			Options: options.Index().SetName("groups_owner_wallet_idx"),
+		},
+		{
+			Keys:    bson.D{{Key: "invite_code", Value: 1}},
+			Options: options.Index().SetName("groups_invite_code_unique_idx").SetUnique(true),
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("create groups indexes: %w", err)
+	}
+
+	groupMemberships := database.Collection("group_memberships")
+
+	_, err = groupMemberships.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{
+			Keys: bson.D{
+				{Key: "group_id", Value: 1},
+				{Key: "wallet_address", Value: 1},
+			},
+			Options: options.Index().SetName("group_memberships_group_wallet_unique_idx").SetUnique(true),
+		},
+		{
+			Keys:    bson.D{{Key: "wallet_address", Value: 1}},
+			Options: options.Index().SetName("group_memberships_wallet_address_idx"),
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("create group_memberships indexes: %w", err)
+	}
+
 	return nil
 }

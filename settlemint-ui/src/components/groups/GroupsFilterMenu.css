@@ -1,0 +1,119 @@
+.groups-filter-menu {
+  position: absolute;
+  top: -6px;
+  left: calc(100% + 10px);
+  width: 208px;
+  max-height: min(340px, calc(100vh - 72px));
+  overflow-y: auto;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(17, 47, 40, 0.98), rgba(9, 24, 20, 0.98));
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
+  padding: 10px;
+  z-index: 15;
+}
+
+.groups-filter-menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.groups-filter-menu-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.groups-filter-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.groups-filter-menu-option {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  padding: 8px 9px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.groups-filter-menu-option:hover,
+.groups-filter-menu-option:focus-visible {
+  border-color: var(--primary-dark);
+  background: rgba(83, 214, 174, 0.08);
+  outline: none;
+}
+
+.groups-filter-menu-option.active {
+  border-color: rgba(83, 214, 174, 0.3);
+  background: rgba(83, 214, 174, 0.12);
+}
+
+.groups-filter-menu-option-body {
+  min-width: 0;
+}
+
+.groups-filter-menu-option-title {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.groups-filter-menu-option-copy {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.groups-filter-menu-checkbox {
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.groups-filter-menu-checkbox.active {
+  border-color: rgba(83, 214, 174, 0.44);
+  background: rgba(83, 214, 174, 0.16);
+}
+
+.groups-filter-menu-checkbox-tick {
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: transparent;
+}
+
+.groups-filter-menu-checkbox.active .groups-filter-menu-checkbox-tick {
+  background: var(--accent);
+}
+
+.groups-filter-menu-divider {
+  height: 1px;
+  margin: 8px 0;
+  background: var(--border-soft);
+}
+
+@media (max-width: 1180px) {
+  .groups-filter-menu {
+    left: auto;
+    right: 0;
+    top: calc(100% + 10px);
+  }
+}
