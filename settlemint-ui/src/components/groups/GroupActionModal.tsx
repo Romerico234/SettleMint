@@ -7,6 +7,7 @@ type GroupActionModalProps = {
   confirmLabel: string;
   submittingLabel: string;
   submitting: boolean;
+  errorMessage: string | null;
   tone?: "default" | "danger";
   onClose: () => void;
   onConfirm: () => void;
@@ -19,6 +20,7 @@ export default function GroupActionModal({
   confirmLabel,
   submittingLabel,
   submitting,
+  errorMessage,
   tone = "default",
   onClose,
   onConfirm,
@@ -58,6 +60,7 @@ export default function GroupActionModal({
         </div>
 
         <div className="group-action-modal-actions">
+          {errorMessage && <p className="group-action-modal-error">{errorMessage}</p>}
           <button
             className="btn btn-secondary group-action-modal-button"
             type="button"

@@ -1,7 +1,15 @@
+import type { GroupMember } from "../../shared/types";
+
 type HeroSectionProps = {
-  currentGroup: { id: string; name: string; ownerWallet: string } | null;
+  currentGroup: {
+    id: string;
+    name: string;
+    ownerWallet: string;
+    memberCount: number;
+    currentUserRole?: "owner" | "member";
+  } | null;
   currentWalletAddress: string | null;
-  members: { id: string }[];
+  groupMembers: GroupMember[];
   expenseTotal: number;
   pendingCount: number;
   verifiedCount: number;
@@ -29,7 +37,7 @@ function StatCard({ label, value, caption }: StatCardProps) {
 export default function HeroSection({
   currentGroup,
   currentWalletAddress,
-  members,
+  groupMembers,
   expenseTotal,
   pendingCount,
   verifiedCount,
@@ -38,8 +46,9 @@ export default function HeroSection({
   onDeleteGroup,
 }: HeroSectionProps) {
   const isOwner =
-    Boolean(currentGroup && currentWalletAddress) &&
-    currentGroup?.ownerWallet.toLowerCase() === currentWalletAddress?.toLowerCase();
+    currentGroup?.currentUserRole === "owner" ||
+    (Boolean(currentGroup && currentWalletAddress) &&
+      currentGroup?.ownerWallet.toLowerCase() === currentWalletAddress?.toLowerCase());
 
   return (
     <section className="dashboard-grid dashboard-grid-hero">
@@ -52,7 +61,7 @@ export default function HeroSection({
             </h2>
           </div>
           <div className="member-pill">
-            <strong>{members.length}</strong>
+            <strong>{currentGroup?.memberCount ?? 0}</strong>
             <span>Members</span>
           </div>
         </div>
@@ -61,6 +70,25 @@ export default function HeroSection({
             ? "Group balances and activity will update here as Settlement Cycles are created."
             : "Create a group to start inviting members and organizing Settlement Cycles."}
         </p>
+        {currentGroup && groupMembers.length > 0 && (
+          <div className="highlight-card-members">
+            {groupMembers.map((member) => (
+              <div className="highlight-card-member-row" key={member.walletAddress}>
+                <div>
+                  <div className="highlight-card-member-name">
+                    {member.displayName.trim() || "Unnamed member"}
+                  </div>
+                  <div className="highlight-card-member-wallet">
+                    {shortWallet(member.walletAddress)}
+                  </div>
+                </div>
+                <span className={`pill ${member.role === "owner" ? "pill-active" : "pill-archived"}`}>
+                  {member.role === "owner" ? "Owner" : "Member"}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
         {currentGroup && (
           <div className="highlight-card-actions">
             {isOwner ? (
@@ -103,4 +131,12 @@ export default function HeroSection({
       />
     </section>
   );
+}
+
+function shortWallet(walletAddress: string) {
+  if (!walletAddress) {
+    return "Wallet unavailable";
+  }
+
+  return `${walletAddress.slice(0, 8)}...${walletAddress.slice(-4)}`;
 }

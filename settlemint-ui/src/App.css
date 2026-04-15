@@ -109,6 +109,35 @@
   min-width: 152px;
 }
 
+.highlight-card-members {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.highlight-card-member-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-soft);
+}
+
+.highlight-card-member-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.highlight-card-member-wallet {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .member-pill {
   min-width: 88px;
   border-radius: 999px;

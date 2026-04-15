@@ -4,6 +4,7 @@ type JoinGroupModalProps = {
   isOpen: boolean;
   inviteCode: string;
   submitting: boolean;
+  errorMessage: string | null;
   onInviteCodeChange: (value: string) => void;
   onClose: () => void;
   onSubmit: () => void;
@@ -13,6 +14,7 @@ export default function JoinGroupModal({
   isOpen,
   inviteCode,
   submitting,
+  errorMessage,
   onInviteCodeChange,
   onClose,
   onSubmit,
@@ -64,6 +66,7 @@ export default function JoinGroupModal({
               autoFocus
             />
           </label>
+          {errorMessage && <p className="join-group-modal-error">{errorMessage}</p>}
         </div>
 
         <div className="join-group-modal-actions">

@@ -10,6 +10,7 @@ type SidebarProps = {
   walletConnected: boolean;
   walletAddress: string | null;
   walletLoading: boolean;
+  walletError: string | null;
   profile: UserProfile | null;
   profileSaving: boolean;
   onWalletAction: () => Promise<void>;
@@ -35,6 +36,7 @@ export default function Sidebar({
   walletConnected,
   walletAddress,
   walletLoading,
+  walletError,
   profile,
   profileSaving,
   onWalletAction,
@@ -211,6 +213,8 @@ export default function Sidebar({
               Sign out
             </button>
           )}
+
+          {walletError && <p className="sidebar-wallet-error">{walletError}</p>}
         </div>
       </div>
 

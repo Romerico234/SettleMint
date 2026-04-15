@@ -42,6 +42,10 @@ func (s *Service) ListMyGroups(ctx context.Context, authUser auth.User) ([]Group
 	return s.store.ListGroupsByWallet(ctx, authUser.WalletAddress)
 }
 
+func (s *Service) ListGroupMembers(ctx context.Context, authUser auth.User, groupID string) ([]GroupMember, error) {
+	return s.store.ListGroupMembers(ctx, authUser, strings.TrimSpace(groupID))
+}
+
 func (s *Service) LeaveGroup(ctx context.Context, authUser auth.User, groupID string) error {
 	return s.store.LeaveGroup(ctx, authUser, strings.TrimSpace(groupID))
 }

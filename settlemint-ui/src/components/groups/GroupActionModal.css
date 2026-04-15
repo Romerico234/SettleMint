@@ -64,8 +64,17 @@
 .group-action-modal-actions {
   margin-top: 24px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 12px;
+}
+
+.group-action-modal-error {
+  width: 100%;
+  margin: 0;
+  color: #fca5a5;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .group-action-modal-button {

@@ -95,6 +95,10 @@ func EnsureCollections(ctx context.Context, database *mongo.Database) error {
 
 	_, err = groupMemberships.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{
+			Keys:    bson.D{{Key: "group_id", Value: 1}},
+			Options: options.Index().SetName("group_memberships_group_id_idx"),
+		},
+		{
 			Keys: bson.D{
 				{Key: "group_id", Value: 1},
 				{Key: "wallet_address", Value: 1},

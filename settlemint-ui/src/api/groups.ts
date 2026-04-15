@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import type { Group } from "../shared/types";
+import type { Group, GroupMember } from "../shared/types";
 
 export async function createGroup(input: { name: string }) {
   const response = await apiFetch("/groups/", {
@@ -60,4 +60,15 @@ export async function deleteGroup(groupID: string) {
     const errorBody = (await response.json().catch(() => null)) as { error?: string } | null;
     throw new Error(errorBody?.error || "Failed to delete group");
   }
+}
+
+export async function fetchGroupMembers(groupID: string) {
+  const response = await apiFetch(`/groups/${groupID}/members`);
+
+  if (!response.ok) {
+    const errorBody = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(errorBody?.error || "Failed to load group members");
+  }
+
+  return (await response.json()) as { members: GroupMember[] };
 }

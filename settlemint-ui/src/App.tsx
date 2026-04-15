@@ -27,7 +27,14 @@ import {
   fetchAuthenticatedUser,
   verifyWalletSignature,
 } from "./api/auth";
-import { createGroup, deleteGroup, fetchMyGroups, joinGroup, leaveGroup } from "./api/groups";
+import {
+  createGroup,
+  deleteGroup,
+  fetchGroupMembers,
+  fetchMyGroups,
+  joinGroup,
+  leaveGroup,
+} from "./api/groups";
 import { fetchMyProfile, updateMyProfile } from "./api/users";
 import { clearAuthToken, getAuthToken, setAuthToken } from "./lib/auth";
 import {
@@ -37,7 +44,7 @@ import {
   signMessage,
 } from "./lib/wallet";
 import type { UserProfile } from "./api/users";
-import type { Group } from "./shared/types";
+import type { Group, GroupMember } from "./shared/types";
 
 export default function App() {
   const inviteFromUrl = new URLSearchParams(window.location.search).get("invite")?.trim() || "";
@@ -47,7 +54,7 @@ export default function App() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileSaving, setProfileSaving] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [walletError, setWalletError] = useState<string | null>(null);
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [groupNameDraft, setGroupNameDraft] = useState("");
   const [groupSubmitting, setGroupSubmitting] = useState(false);
@@ -57,13 +64,16 @@ export default function App() {
   const [isJoinGroupModalOpen, setIsJoinGroupModalOpen] = useState(false);
   const [joinInviteCodeDraft, setJoinInviteCodeDraft] = useState(inviteFromUrl);
   const [joinSubmitting, setJoinSubmitting] = useState(false);
+  const [joinGroupError, setJoinGroupError] = useState<string | null>(null);
   const [groupActionSubmitting, setGroupActionSubmitting] = useState(false);
   const [pendingGroupAction, setPendingGroupAction] = useState<"leave" | "delete" | null>(null);
+  const [groupActionError, setGroupActionError] = useState<string | null>(null);
   const [groupFilterMode, setGroupFilterMode] = useState<GroupFilterMode>("all");
   const [groupSortMode, setGroupSortMode] = useState<GroupSortMode>("date");
 
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [cycles] = useState<Cycle[]>([]);
   const [selectedCycle, setSelectedCycle] = useState<Cycle | null>(null);
 
@@ -77,19 +87,14 @@ export default function App() {
   const walletAddress = authenticatedWalletAddress || connectedWalletAddress;
   const inviteBaseUrl = window.location.origin;
   const visibleGroups = useMemo(() => {
-    const normalizedWalletAddress = walletAddress?.toLowerCase() || "";
     let nextGroups = [...groups];
 
-    if (groupFilterMode === "owned" && normalizedWalletAddress) {
-      nextGroups = nextGroups.filter(
-        (group) => group.ownerWallet.toLowerCase() === normalizedWalletAddress,
-      );
+    if (groupFilterMode === "owned") {
+      nextGroups = nextGroups.filter((group) => group.currentUserRole === "owner");
     }
 
-    if (groupFilterMode === "member" && normalizedWalletAddress) {
-      nextGroups = nextGroups.filter(
-        (group) => group.ownerWallet.toLowerCase() !== normalizedWalletAddress,
-      );
+    if (groupFilterMode === "member") {
+      nextGroups = nextGroups.filter((group) => group.currentUserRole === "member");
     }
 
     if (groupSortMode === "name") {
@@ -102,7 +107,7 @@ export default function App() {
         new Date(rightGroup.createdAt).getTime() - new Date(leftGroup.createdAt).getTime(),
     );
     return nextGroups;
-  }, [groups, groupFilterMode, groupSortMode, walletAddress]);
+  }, [groups, groupFilterMode, groupSortMode]);
 
   const totals = useMemo(() => {
     const expenseTotal = expenses.reduce((sum, item) => sum + item.amount, 0);
@@ -121,6 +126,7 @@ export default function App() {
       setProfile(null);
       setGroups([]);
       setSelectedGroup(null);
+      setGroupMembers([]);
       return;
     }
 
@@ -149,7 +155,7 @@ export default function App() {
           setProfile(null);
           setGroups([]);
           setSelectedGroup(null);
-          setAuthError(error.message);
+          setWalletError(formatErrorMessage(error, "Failed to load account"));
         }
       });
 
@@ -157,6 +163,31 @@ export default function App() {
       mounted = false;
     };
   }, [accessToken]);
+
+  useEffect(() => {
+    if (!accessToken || !selectedGroup) {
+      setGroupMembers([]);
+      return;
+    }
+
+    let mounted = true;
+
+    fetchGroupMembers(selectedGroup.id)
+      .then((result) => {
+        if (mounted) {
+          setGroupMembers(result.members);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setGroupMembers([]);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [accessToken, selectedGroup?.id]);
 
   useEffect(() => {
     if (!inviteFromUrl || !accessToken) {
@@ -184,7 +215,7 @@ export default function App() {
     }
 
     setAuthLoading(true);
-    setAuthError(null);
+    setWalletError(null);
 
     try {
       const wallet =
@@ -192,7 +223,7 @@ export default function App() {
         (await requestWalletAccess());
 
       if (!wallet) {
-        setAuthError("MetaMask or another Ethereum wallet was not detected in this browser.");
+        setWalletError("MetaMask or another Ethereum wallet was not detected in this browser.");
         return;
       }
 
@@ -214,9 +245,9 @@ export default function App() {
 
       setAuthToken(result.token);
       setAccessToken(result.token);
-      setAuthError(null);
+      setWalletError(null);
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Failed to sign in with wallet");
+      setWalletError(formatErrorMessage(error, "Failed to sign in with wallet"));
     } finally {
       setAuthLoading(false);
     }
@@ -224,12 +255,13 @@ export default function App() {
 
   async function handleSignOut() {
     setAuthLoading(true);
-    setAuthError(null);
+    setWalletError(null);
     clearAuthToken();
     setAccessToken(null);
     setProfile(null);
     setGroups([]);
-    setSelectedGroup(null);
+      setSelectedGroup(null);
+    setGroupMembers([]);
     setConnectedWalletAddress(null);
     setAuthLoading(false);
   }
@@ -238,20 +270,20 @@ export default function App() {
     displayName: string;
   }) {
     setProfileSaving(true);
-    setAuthError(null);
+    setWalletError(null);
 
     try {
       const result = await updateMyProfile(input);
       setProfile(result.profile);
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Failed to save profile");
+      setWalletError(formatErrorMessage(error, "Failed to save profile"));
     } finally {
       setProfileSaving(false);
     }
   }
 
   function handleCreateGroup() {
-    setAuthError(null);
+    setWalletError(null);
     setGroupNameDraft("");
     setCreateGroupError(null);
     setCreatedGroupInvite(null);
@@ -287,9 +319,7 @@ export default function App() {
       setGroupNameDraft("");
       setCreatedGroupInvite(result.group);
     } catch (error) {
-      setCreateGroupError(
-        error instanceof Error ? error.message : "Failed to create group",
-      );
+      setCreateGroupError(formatErrorMessage(error, "Failed to create group"));
     } finally {
       setGroupSubmitting(false);
     }
@@ -373,7 +403,7 @@ export default function App() {
   }
 
   function handleOpenJoinGroupModal() {
-    setAuthError(null);
+    setJoinGroupError(null);
     setIsJoinGroupModalOpen(true);
   }
 
@@ -383,6 +413,7 @@ export default function App() {
     }
 
     setIsJoinGroupModalOpen(false);
+    setJoinGroupError(null);
     if (!inviteFromUrl) {
       setJoinInviteCodeDraft("");
     }
@@ -391,12 +422,12 @@ export default function App() {
   async function handleSubmitJoinGroup() {
     const inviteCode = extractInviteCode(joinInviteCodeDraft);
     if (!inviteCode) {
-      setAuthError("Invite code is required.");
+      setJoinGroupError("Invite code is required.");
       return;
     }
 
     setJoinSubmitting(true);
-    setAuthError(null);
+    setJoinGroupError(null);
 
     try {
       const result = await joinGroup({ inviteCode });
@@ -408,7 +439,7 @@ export default function App() {
       url.searchParams.delete("invite");
       window.history.replaceState({}, "", url.toString());
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Failed to join group");
+      setJoinGroupError(formatErrorMessage(error, "Failed to join group"));
     } finally {
       setJoinSubmitting(false);
     }
@@ -420,14 +451,14 @@ export default function App() {
     }
 
     setGroupActionSubmitting(true);
-    setAuthError(null);
+    setGroupActionError(null);
 
     try {
       await leaveGroup(selectedGroup.id);
       removeGroup(selectedGroup.id);
       setPendingGroupAction(null);
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Failed to leave group");
+      setGroupActionError(formatErrorMessage(error, "Failed to leave group"));
     } finally {
       setGroupActionSubmitting(false);
     }
@@ -439,21 +470,21 @@ export default function App() {
     }
 
     setGroupActionSubmitting(true);
-    setAuthError(null);
+    setGroupActionError(null);
 
     try {
       await deleteGroup(selectedGroup.id);
       removeGroup(selectedGroup.id);
       setPendingGroupAction(null);
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Failed to delete group");
+      setGroupActionError(formatErrorMessage(error, "Failed to delete group"));
     } finally {
       setGroupActionSubmitting(false);
     }
   }
 
   function handleCreateSettlementPeriod() {
-    setAuthError("Settlement Cycle creation UI is restored, but the backend flow has not been implemented yet.");
+    setWalletError("Settlement Cycle creation UI is restored, but the backend flow has not been implemented yet.");
   }
 
   function handleCloseGroupActionModal() {
@@ -462,6 +493,7 @@ export default function App() {
     }
 
     setPendingGroupAction(null);
+    setGroupActionError(null);
   }
 
   function handleConfirmGroupAction() {
@@ -498,6 +530,7 @@ export default function App() {
         isOpen={isJoinGroupModalOpen}
         inviteCode={joinInviteCodeDraft}
         submitting={joinSubmitting}
+        errorMessage={joinGroupError}
         onInviteCodeChange={setJoinInviteCodeDraft}
         onClose={handleCloseJoinGroupModal}
         onSubmit={() => void handleSubmitJoinGroup()}
@@ -517,6 +550,7 @@ export default function App() {
         confirmLabel={pendingGroupAction === "delete" ? "Delete Group" : "Leave Group"}
         submittingLabel={pendingGroupAction === "delete" ? "Deleting..." : "Leaving..."}
         submitting={groupActionSubmitting}
+        errorMessage={groupActionError}
         tone={pendingGroupAction === "delete" ? "danger" : "default"}
         onClose={handleCloseGroupActionModal}
         onConfirm={handleConfirmGroupAction}
@@ -527,6 +561,7 @@ export default function App() {
           walletConnected={Boolean(connectedWalletAddress)}
           walletAddress={walletAddress}
           walletLoading={authLoading}
+          walletError={walletError}
           profile={profile}
           profileSaving={profileSaving}
           onWalletAction={handleWalletSignIn}
@@ -548,7 +583,6 @@ export default function App() {
 
         <main className="app-main">
           <Header
-            authError={authError}
             actionsDisabled={!accessToken}
             onCreateGroup={handleCreateGroup}
             onJoinGroup={handleOpenJoinGroupModal}
@@ -558,7 +592,7 @@ export default function App() {
           <HeroSection
             currentGroup={selectedGroup}
             currentWalletAddress={walletAddress}
-            members={members}
+            groupMembers={groupMembers}
             expenseTotal={totals.expenseTotal}
             pendingCount={totals.pendingCount}
             verifiedCount={totals.verifiedCount}
@@ -598,4 +632,13 @@ function extractInviteCode(value: string) {
   } catch {
     return trimmedValue;
   }
+}
+
+function formatErrorMessage(error: unknown, fallbackMessage: string) {
+  const message =
+    error instanceof Error && error.message.trim() !== ""
+      ? error.message.trim()
+      : fallbackMessage;
+
+  return message.charAt(0).toUpperCase() + message.slice(1);
 }
