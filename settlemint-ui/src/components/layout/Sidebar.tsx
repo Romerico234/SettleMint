@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { Cycle, Group, GroupFilterMode, GroupSortMode, Tab } from "../../shared/types";
 import type { UserProfile } from "../../api/users";
-import groupsFilterOnIcon from "../../assets/groups-filter-on.png";
-import groupsFilterOffIcon from "../../assets/groups-filter-off.png";
+import filterOnIcon from "../../assets/filter-on.png";
+import filterOffIcon from "../../assets/filter-off.png";
 import GroupsFilterMenu from "../groups/GroupsFilterMenu";
 import "./Sidebar.css";
 
@@ -237,8 +237,8 @@ export default function Sidebar({
               <img
                 src={
                   isGroupsFilterMenuOpen
-                    ? groupsFilterOffIcon
-                    : groupsFilterOnIcon
+                    ? filterOffIcon
+                    : filterOnIcon
                 }
                 alt=""
                 className="sidebar-filter-toggle-icon"
