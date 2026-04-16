@@ -1,16 +1,16 @@
 import "./Header.css";
 
 type HeaderProps = {
-  authError: string | null;
   actionsDisabled?: boolean;
   onCreateGroup?: () => void;
+  onJoinGroup?: () => void;
   onCreateSettlementPeriod?: () => void;
 };
 
 export default function Header({
-  authError,
   actionsDisabled = false,
   onCreateGroup,
+  onJoinGroup,
   onCreateSettlementPeriod,
 }: HeaderProps) {
   return (
@@ -22,8 +22,6 @@ export default function Header({
           Record expenses, compute a minimal settlement plan, and verify repayment
           with blockchain transaction proof.
         </p>
-
-        {authError && <p className="page-inline-error">{authError}</p>}
       </div>
 
       <div className="page-header-actions">
@@ -34,6 +32,14 @@ export default function Header({
           disabled={actionsDisabled}
         >
           Create Group
+        </button>
+        <button
+          className="btn btn-secondary"
+          type="button"
+          onClick={onJoinGroup}
+          disabled={actionsDisabled}
+        >
+          Join Group
         </button>
         <button
           className="btn btn-primary"

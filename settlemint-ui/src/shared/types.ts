@@ -2,6 +2,26 @@ export type Tab = "Overview" | "Expenses" | "Settlement Plan" | "Archive";
 
 export type CycleStatus = "Active" | "Archived";
 
+export type Group = {
+  id: string;
+  name: string;
+  ownerWallet: string;
+  inviteCode: string;
+  memberCount: number;
+  currentUserRole?: "owner" | "member";
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GroupFilterMode = "all" | "owned" | "member";
+export type GroupSortMode = "date" | "name";
+
+export type GroupMember = {
+  walletAddress: string;
+  displayName: string;
+  role: "owner" | "member";
+};
+
 export type Cycle = {
   id: string;
   name: string;
