@@ -14,9 +14,9 @@ import ExpensesTab from "./components/expenses/ExpensesTab";
 import SettlementPlanTab from "./components/settlement/SettlementPlanTab";
 import ArchiveTab from "./components/archive/ArchiveTab";
 import { useAppRoute } from "./lib/appRoute";
-import { useWalletSession } from "./hooks/useWalletSession";
-import { useGroupWorkspace } from "./hooks/useGroupWorkspace";
-import { useCycleFinance } from "./hooks/useCycleFinance";
+import { useAccountSession } from "./hooks/useAccountSession";
+import { useGroupDirectory } from "./hooks/useGroupDirectory";
+import { useSettlementLedger } from "./hooks/useSettlementLedger";
 
 export default function App() {
   const {
@@ -38,14 +38,14 @@ export default function App() {
     authLoading,
     walletError,
     walletAddress,
-    handleWalletSignIn,
-    handleSignOut: signOutWalletSession,
-    handleSaveProfile,
-  } = useWalletSession();
+    signIn,
+    signOut,
+    saveProfile,
+  } = useAccountSession();
 
   const inviteBaseUrl = window.location.origin;
 
-  const groupWorkspace = useGroupWorkspace({
+  const groupDirectory = useGroupDirectory({
     accessToken,
     walletAddress,
     requestedGroupID,
@@ -57,20 +57,20 @@ export default function App() {
     inviteBaseUrl,
   });
 
-  const cycleFinance = useCycleFinance({
+  const settlementLedger = useSettlementLedger({
     accessToken,
-    selectedGroup: groupWorkspace.selectedGroup,
-    selectedCycle: groupWorkspace.selectedCycle,
-    groupMembers: groupWorkspace.groupMembers,
+    selectedGroup: groupDirectory.groups.current,
+    selectedCycle: groupDirectory.cycles.current,
+    groupMembers: groupDirectory.groups.members,
     walletAddress,
   });
 
   const [badges] = useState([]);
 
   async function handleSignOut() {
-    await signOutWalletSession();
-    groupWorkspace.resetGroupUIState();
-    cycleFinance.resetFinanceUIState();
+    await signOut();
+    groupDirectory.resetUiState();
+    settlementLedger.resetUiState();
   }
 
   return (
@@ -79,72 +79,64 @@ export default function App() {
       <div className="app-glow app-glow-two" />
 
       <CreateGroupModal
-        isOpen={groupWorkspace.isCreateGroupModalOpen}
-        groupName={groupWorkspace.groupNameDraft}
-        submitting={groupWorkspace.groupSubmitting}
-        createdGroup={groupWorkspace.createdGroupInvite}
-        copiedState={groupWorkspace.createGroupCopiedState}
-        errorMessage={groupWorkspace.createGroupError}
-        onGroupNameChange={groupWorkspace.handleCreateGroupNameChange}
-        onClose={groupWorkspace.handleCloseCreateGroupModal}
-        onSubmit={() => void groupWorkspace.handleSubmitCreateGroup()}
-        onReset={groupWorkspace.handleResetCreateGroupModal}
-        onCopyInviteCode={() => void groupWorkspace.handleCopyCreatedInviteCode()}
-        onCopyInviteLink={() => void groupWorkspace.handleCopyCreatedInviteLink()}
+        isOpen={groupDirectory.dialogs.createGroup.isOpen}
+        groupName={groupDirectory.dialogs.createGroup.name}
+        submitting={groupDirectory.dialogs.createGroup.submitting}
+        createdGroup={groupDirectory.dialogs.createGroup.createdGroup}
+        copiedState={groupDirectory.dialogs.createGroup.copiedState}
+        errorMessage={groupDirectory.dialogs.createGroup.errorMessage}
+        onGroupNameChange={groupDirectory.dialogs.createGroup.updateName}
+        onClose={groupDirectory.dialogs.createGroup.close}
+        onSubmit={() => void groupDirectory.dialogs.createGroup.submit()}
+        onReset={groupDirectory.dialogs.createGroup.reset}
+        onCopyInviteCode={() => void groupDirectory.dialogs.createGroup.copyInviteCode()}
+        onCopyInviteLink={() => void groupDirectory.dialogs.createGroup.copyInviteLink()}
       />
 
       <JoinGroupModal
-        isOpen={groupWorkspace.isJoinGroupModalOpen}
-        inviteCode={groupWorkspace.joinInviteCodeDraft}
-        submitting={groupWorkspace.joinSubmitting}
-        errorMessage={groupWorkspace.joinGroupError}
-        onInviteCodeChange={groupWorkspace.setJoinInviteCodeDraft}
-        onClose={groupWorkspace.handleCloseJoinGroupModal}
-        onSubmit={() => void groupWorkspace.handleSubmitJoinGroup()}
+        isOpen={groupDirectory.dialogs.joinGroup.isOpen}
+        inviteCode={groupDirectory.dialogs.joinGroup.inviteCode}
+        submitting={groupDirectory.dialogs.joinGroup.submitting}
+        errorMessage={groupDirectory.dialogs.joinGroup.errorMessage}
+        onInviteCodeChange={groupDirectory.dialogs.joinGroup.updateInviteCode}
+        onClose={groupDirectory.dialogs.joinGroup.close}
+        onSubmit={() => void groupDirectory.dialogs.joinGroup.submit()}
       />
 
       <GroupActionModal
-        isOpen={groupWorkspace.pendingGroupAction !== null}
-        title={
-          groupWorkspace.pendingGroupAction === "delete"
-            ? `Delete ${groupWorkspace.selectedGroup ? `"${groupWorkspace.selectedGroup.name}"` : "group"}?`
-            : `Leave ${groupWorkspace.selectedGroup ? `"${groupWorkspace.selectedGroup.name}"` : "group"}?`
-        }
-        description={
-          groupWorkspace.pendingGroupAction === "delete"
-            ? "This is only allowed when no other members remain in the group."
-            : "You will lose access to this group until someone invites you again."
-        }
-        confirmLabel={groupWorkspace.pendingGroupAction === "delete" ? "Delete Group" : "Leave Group"}
-        submittingLabel={groupWorkspace.pendingGroupAction === "delete" ? "Deleting..." : "Leaving..."}
-        submitting={groupWorkspace.groupActionSubmitting}
-        errorMessage={groupWorkspace.groupActionError}
-        tone={groupWorkspace.pendingGroupAction === "delete" ? "danger" : "default"}
-        onClose={groupWorkspace.handleCloseGroupActionModal}
-        onConfirm={groupWorkspace.handleConfirmGroupAction}
+        isOpen={groupDirectory.dialogs.groupAction.isOpen}
+        title={groupDirectory.dialogs.groupAction.title}
+        description={groupDirectory.dialogs.groupAction.description}
+        confirmLabel={groupDirectory.dialogs.groupAction.confirmLabel}
+        submittingLabel={groupDirectory.dialogs.groupAction.submittingLabel}
+        submitting={groupDirectory.dialogs.groupAction.submitting}
+        errorMessage={groupDirectory.dialogs.groupAction.errorMessage}
+        tone={groupDirectory.dialogs.groupAction.tone}
+        onClose={groupDirectory.dialogs.groupAction.close}
+        onConfirm={groupDirectory.dialogs.groupAction.confirm}
       />
 
       <CreateSettlementCycleModal
-        isOpen={groupWorkspace.isCreateCycleModalOpen}
-        groupName={groupWorkspace.selectedGroup?.name ?? null}
-        cycleName={groupWorkspace.cycleNameDraft}
-        submitting={groupWorkspace.cycleSubmitting}
-        errorMessage={groupWorkspace.createCycleError}
-        onCycleNameChange={groupWorkspace.handleCycleNameChange}
-        onClose={groupWorkspace.handleCloseCreateCycleModal}
-        onSubmit={() => void groupWorkspace.handleSubmitCreateCycle()}
+        isOpen={groupDirectory.dialogs.createCycle.isOpen}
+        groupName={groupDirectory.groups.current?.name ?? null}
+        cycleName={groupDirectory.dialogs.createCycle.name}
+        submitting={groupDirectory.dialogs.createCycle.submitting}
+        errorMessage={groupDirectory.dialogs.createCycle.errorMessage}
+        onCycleNameChange={groupDirectory.dialogs.createCycle.updateName}
+        onClose={groupDirectory.dialogs.createCycle.close}
+        onSubmit={() => void groupDirectory.dialogs.createCycle.submit()}
       />
       
       <CreateExpenseModal
-        isOpen={cycleFinance.isCreateExpenseModalOpen}
-        groupName={groupWorkspace.selectedGroup?.name ?? null}
-        cycleName={groupWorkspace.selectedCycle?.name ?? null}
-        members={groupWorkspace.groupMembers}
-        defaultPaidByWallet={cycleFinance.defaultPaidByWallet}
-        submitting={cycleFinance.expenseSubmitting}
-        errorMessage={cycleFinance.createExpenseError}
-        onClose={cycleFinance.handleCloseCreateExpenseModal}
-        onSubmit={cycleFinance.handleSubmitCreateExpense}
+        isOpen={settlementLedger.expenseDialog.isOpen}
+        groupName={groupDirectory.groups.current?.name ?? null}
+        cycleName={groupDirectory.cycles.current?.name ?? null}
+        members={groupDirectory.groups.members}
+        defaultPaidByWallet={settlementLedger.expenseDialog.defaultPaidByWallet}
+        submitting={settlementLedger.expenseDialog.submitting}
+        errorMessage={settlementLedger.expenseDialog.errorMessage}
+        onClose={settlementLedger.expenseDialog.close}
+        onSubmit={settlementLedger.expenseDialog.submit}
       />
 
       <div className="app-shell">
@@ -155,83 +147,87 @@ export default function App() {
           walletError={walletError}
           profile={profile}
           profileSaving={profileSaving}
-          onWalletAction={handleWalletSignIn}
+          onWalletAction={signIn}
           onDisconnect={handleSignOut}
-          onSaveProfile={handleSaveProfile}
+          onSaveProfile={saveProfile}
           selectedTab={selectedTab}
           setSelectedTab={(tab) => setSelectedTab(tab)}
-          groups={groupWorkspace.visibleGroups}
-          selectedGroup={groupWorkspace.selectedGroup}
-          setSelectedGroup={groupWorkspace.setSelectedGroup}
-          groupFilterMode={groupWorkspace.groupFilterMode}
-          groupSortMode={groupWorkspace.groupSortMode}
-          onGroupFilterModeChange={groupWorkspace.setGroupFilterMode}
-          onGroupSortModeChange={groupWorkspace.setGroupSortMode}
-          cycles={groupWorkspace.cycles}
-          selectedCycle={groupWorkspace.selectedCycle}
-          setSelectedCycle={groupWorkspace.setSelectedCycle}
+          groups={groupDirectory.groups.list}
+          selectedGroup={groupDirectory.groups.current}
+          setSelectedGroup={groupDirectory.groups.select}
+          groupFilterMode={groupDirectory.filters.mode}
+          groupSortMode={groupDirectory.filters.sortMode}
+          onGroupFilterModeChange={groupDirectory.filters.setMode}
+          onGroupSortModeChange={groupDirectory.filters.setSortMode}
+          cycles={groupDirectory.cycles.list}
+          selectedCycle={groupDirectory.cycles.current}
+          setSelectedCycle={groupDirectory.cycles.select}
         />
 
         <main className="app-main">
           <Header
             actionsDisabled={!accessToken}
-            showSettlementCycleAction={groupWorkspace.canCreateSettlementCycle}
-            onCreateGroup={groupWorkspace.handleCreateGroup}
-            onJoinGroup={groupWorkspace.handleOpenJoinGroupModal}
-            onCreateSettlementPeriod={groupWorkspace.handleCreateSettlementPeriod}
+            showSettlementCycleAction={groupDirectory.cycles.canCreate}
+            onCreateGroup={groupDirectory.dialogs.createGroup.open}
+            onJoinGroup={groupDirectory.dialogs.joinGroup.open}
+            onCreateSettlementPeriod={groupDirectory.dialogs.createCycle.open}
           />
 
           <HeroSection
-            currentGroup={groupWorkspace.selectedGroup}
+            currentGroup={groupDirectory.groups.current}
             currentWalletAddress={walletAddress}
-            groupMembers={groupWorkspace.groupMembers}
-            expenseTotal={cycleFinance.totals.expenseTotal}
-            pendingCount={cycleFinance.totals.pendingCount}
-            verifiedCount={cycleFinance.totals.verifiedCount}
-            actionLoading={groupWorkspace.groupActionSubmitting}
-            onLeaveGroup={() => groupWorkspace.setPendingGroupAction("leave")}
-            onDeleteGroup={() => groupWorkspace.setPendingGroupAction("delete")}
+            groupMembers={groupDirectory.groups.members}
+            expenseTotal={settlementLedger.summary.totals.expenseTotal}
+            pendingCount={settlementLedger.summary.totals.pendingCount}
+            verifiedCount={settlementLedger.summary.totals.verifiedCount}
+            actionLoading={groupDirectory.dialogs.groupAction.submitting}
+            onLeaveGroup={() => groupDirectory.dialogs.groupAction.request("leave")}
+            onDeleteGroup={() => groupDirectory.dialogs.groupAction.request("delete")}
           />
 
           {selectedTab === "Overview" && (
             <OverviewTab
-              members={cycleFinance.members}
-              expenses={cycleFinance.expenses}
+              members={settlementLedger.summary.members}
+              expenses={settlementLedger.summary.expenses}
               badges={badges}
-              hasSelectedCycle={cycleFinance.hasSelectedCycle}
-              loading={cycleFinance.financeLoading}
-              errorMessage={cycleFinance.financeError}
-              canAddExpense={cycleFinance.canAddExpense}
-              onRefreshBalances={() => void cycleFinance.handleRefreshCycleFinance()}
-              onAddExpense={cycleFinance.handleOpenCreateExpenseModal}
+              hasSelectedCycle={settlementLedger.cycle.hasSelected}
+              loading={settlementLedger.summary.loading}
+              errorMessage={settlementLedger.summary.errorMessage}
+              canAddExpense={settlementLedger.cycle.canAddExpense}
+              onRefreshBalances={() => void settlementLedger.refresh()}
+              onAddExpense={settlementLedger.expenseDialog.open}
             />
           )}
 
           {selectedTab === "Expenses" && (
             <ExpensesTab
-              expenses={cycleFinance.expenses}
-              selectedCycleName={cycleFinance.hasSelectedCycle ? groupWorkspace.selectedCycle?.name ?? null : null}
-              loading={cycleFinance.financeLoading}
-              errorMessage={cycleFinance.financeError}
-              canAddExpense={cycleFinance.canAddExpense}
-              deletingExpenseIDs={cycleFinance.expenseDeletePendingIDs}
-              onAddExpense={cycleFinance.handleOpenCreateExpenseModal}
-              onApproveDelete={(expenseID) => void cycleFinance.handleApproveExpenseDelete(expenseID)}
+              expenses={settlementLedger.summary.expenses}
+              selectedCycleName={
+                settlementLedger.cycle.hasSelected ? groupDirectory.cycles.current?.name ?? null : null
+              }
+              loading={settlementLedger.summary.loading}
+              errorMessage={settlementLedger.summary.errorMessage}
+              canAddExpense={settlementLedger.cycle.canAddExpense}
+              deletingExpenseIDs={settlementLedger.expenseDeletion.pendingIDs}
+              onAddExpense={settlementLedger.expenseDialog.open}
+              onApproveDelete={(expenseID) => void settlementLedger.expenseDeletion.approve(expenseID)}
             />
           )}
 
           {selectedTab === "Settlement Plan" && (
             <SettlementPlanTab
-              members={cycleFinance.members}
-              settlements={cycleFinance.settlements}
-              selectedCycleName={cycleFinance.hasSelectedCycle ? groupWorkspace.selectedCycle?.name ?? null : null}
-              loading={cycleFinance.financeLoading}
-              errorMessage={cycleFinance.financeError}
+              members={settlementLedger.summary.members}
+              settlements={settlementLedger.summary.settlements}
+              selectedCycleName={
+                settlementLedger.cycle.hasSelected ? groupDirectory.cycles.current?.name ?? null : null
+              }
+              loading={settlementLedger.summary.loading}
+              errorMessage={settlementLedger.summary.errorMessage}
             />
           )}
 
           {selectedTab === "Archive" && (
-            <ArchiveTab archivedCycles={groupWorkspace.archivedCycles} />
+            <ArchiveTab archivedCycles={groupDirectory.cycles.archived} />
           )}
         </main>
       </div>

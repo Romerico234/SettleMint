@@ -15,7 +15,7 @@ import {
   signMessage,
 } from "../lib/wallet";
 
-export function useWalletSession() {
+export function useAccountSession() {
   const [accessToken, setAccessToken] = useState<string | null>(() => getAuthToken());
   const [connectedWalletAddress, setConnectedWalletAddress] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -36,16 +36,20 @@ export function useWalletSession() {
 
     Promise.all([fetchAuthenticatedUser(), fetchMyProfile()])
       .then(([, profileResult]) => {
-        if (mounted) {
-          setProfile(profileResult.profile);
-          setConnectedWalletAddress(profileResult.profile.walletAddress || null);
+        if (!mounted) {
+          return;
         }
+
+        setProfile(profileResult.profile);
+        setConnectedWalletAddress(profileResult.profile.walletAddress || null);
       })
       .catch((error: Error) => {
-        if (mounted) {
-          setProfile(null);
-          setWalletError(formatErrorMessage(error, "Failed to load account"));
+        if (!mounted) {
+          return;
         }
+
+        setProfile(null);
+        setWalletError(formatErrorMessage(error, "Failed to load account"));
       });
 
     return () => {
@@ -53,7 +57,7 @@ export function useWalletSession() {
     };
   }, [accessToken]);
 
-  async function handleWalletSignIn() {
+  async function signIn() {
     if (accessToken && authenticatedWalletAddress) {
       return;
     }
@@ -95,7 +99,7 @@ export function useWalletSession() {
     }
   }
 
-  async function handleSignOut() {
+  async function signOut() {
     setAuthLoading(true);
     setWalletError(null);
     clearAuthToken();
@@ -105,7 +109,7 @@ export function useWalletSession() {
     setAuthLoading(false);
   }
 
-  async function handleSaveProfile(input: { displayName: string }) {
+  async function saveProfile(input: { displayName: string }) {
     setProfileSaving(true);
     setWalletError(null);
 
@@ -127,8 +131,8 @@ export function useWalletSession() {
     authLoading,
     walletError,
     walletAddress,
-    handleWalletSignIn,
-    handleSignOut,
-    handleSaveProfile,
+    signIn,
+    signOut,
+    saveProfile,
   };
 }
