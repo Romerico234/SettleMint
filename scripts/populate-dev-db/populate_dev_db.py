@@ -62,36 +62,6 @@ GROUPS = [
     },
 ]
 
-CYCLES = [
-    {
-        "_id": "cyc_towson_weekend_trip",
-        "group_id": "grp_2ba4c65dd7bb70e8",
-        "name": "Weekend Trip",
-        "status": "Active",
-        "created_by_wallet": "0x2797b22bfbb830de49fe9bb639e4a4c13e5579a4",
-        "created_at": utc("2026-04-16T14:00:00.000Z"),
-        "updated_at": utc("2026-04-16T14:00:00.000Z"),
-    },
-    {
-        "_id": "cyc_towson_february_rent",
-        "group_id": "grp_2ba4c65dd7bb70e8",
-        "name": "February Rent",
-        "status": "Archived",
-        "created_by_wallet": "0x2797b22bfbb830de49fe9bb639e4a4c13e5579a4",
-        "created_at": utc("2026-03-01T12:00:00.000Z"),
-        "updated_at": utc("2026-03-05T18:30:00.000Z"),
-    },
-    {
-        "_id": "cyc_guyanaese_beach_weekend",
-        "group_id": "grp_guyanaese_tigers",
-        "name": "Beach Weekend",
-        "status": "Active",
-        "created_by_wallet": "0x6508118a40b724af44b6fbab8dbdc3a5da38718b",
-        "created_at": utc("2026-04-18T16:00:00.000Z"),
-        "updated_at": utc("2026-04-18T16:00:00.000Z"),
-    },
-]
-
 MEMBERSHIPS = [
     {
         "group_id": "grp_2ba4c65dd7bb70e8",
@@ -132,7 +102,6 @@ def seed_database(mongodb_uri: str, database_name: str) -> None:
 
     user_profiles_collection = database["user_profiles"]
     groups_collection = database["groups"]
-    cycles_collection = database["cycles"]
     group_memberships_collection = database["group_memberships"]
 
     seeded_group_ids = [group["_id"] for group in GROUPS]
@@ -155,16 +124,12 @@ def seed_database(mongodb_uri: str, database_name: str) -> None:
             upsert=True,
         )
 
-    if CYCLES:
-        cycles_collection.insert_many(CYCLES)
-
     group_memberships_collection.delete_many({"group_id": {"$in": seeded_group_ids}})
     if MEMBERSHIPS:
         group_memberships_collection.insert_many(MEMBERSHIPS)
 
     print(f"Upserted {len(USER_PROFILES)} user profiles")
     print(f"Upserted {len(GROUPS)} groups")
-    print(f"Inserted {len(CYCLES)} settlement cycles")
     print(f"Inserted {len(MEMBERSHIPS)} group memberships")
     print()
     print("Seeded groups:")

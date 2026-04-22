@@ -20,6 +20,7 @@ import JoinGroupModal from "./components/groups/JoinGroupModal";
 import CreateSettlementCycleModal from "./components/cycles/CreateSettlementCycleModal";
 import HeroSection from "./components/main/HeroSection";
 import OverviewTab from "./components/main/OverviewTab";
+import CreateExpenseModal from "./components/expenses/CreateExpenseModal";
 import ExpensesTab from "./components/expenses/ExpensesTab";
 import SettlementPlanTab from "./components/settlement/SettlementPlanTab";
 import ArchiveTab from "./components/archive/ArchiveTab";
@@ -37,6 +38,8 @@ import {
   leaveGroup,
 } from "./api/groups";
 import { createSettlementCycle, fetchGroupCycles } from "./api/cycles";
+import { approveExpenseDelete, createCycleExpense, fetchCycleExpenses } from "./api/expenses";
+import { fetchSettlementSummary } from "./api/settlementPlan";
 import { fetchMyProfile, updateMyProfile } from "./api/users";
 import { clearAuthToken, getAuthToken, setAuthToken } from "./lib/auth";
 import {
@@ -77,6 +80,12 @@ export default function App() {
   const [cycleNameDraft, setCycleNameDraft] = useState("");
   const [cycleSubmitting, setCycleSubmitting] = useState(false);
   const [createCycleError, setCreateCycleError] = useState<string | null>(null);
+  const [isCreateExpenseModalOpen, setIsCreateExpenseModalOpen] = useState(false);
+  const [expenseSubmitting, setExpenseSubmitting] = useState(false);
+  const [expenseDeletePendingIDs, setExpenseDeletePendingIDs] = useState<string[]>([]);
+  const [createExpenseError, setCreateExpenseError] = useState<string | null>(null);
+  const [financeLoading, setFinanceLoading] = useState(false);
+  const [financeError, setFinanceError] = useState<string | null>(null);
   const [groupFilterMode, setGroupFilterMode] = useState<GroupFilterMode>("all");
   const [groupSortMode, setGroupSortMode] = useState<GroupSortMode>("date");
 
@@ -86,9 +95,9 @@ export default function App() {
   const [cycles, setCycles] = useState<Cycle[]>([]);
   const [selectedCycle, setSelectedCycle] = useState<Cycle | null>(null);
 
-  const [members] = useState<Member[]>([]);
-  const [expenses] = useState<Expense[]>([]);
-  const [settlements] = useState<Settlement[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [badges] = useState<Badge[]>([]);
 
   const archivedCycles = cycles.filter((cycle) => cycle.status === "Archived");
@@ -121,6 +130,13 @@ export default function App() {
     Boolean(accessToken && selectedGroup && walletAddress) &&
     (selectedGroup?.currentUserRole === "owner" ||
       selectedGroup?.ownerWallet.toLowerCase() === walletAddress?.toLowerCase());
+  const hasSelectedCycle = Boolean(
+    selectedGroup && selectedCycle && selectedCycle.groupId === selectedGroup.id,
+  );
+  const canAddExpense =
+    Boolean(accessToken && selectedGroup && selectedCycle && groupMembers.length > 0) &&
+    selectedCycle?.groupId === selectedGroup?.id &&
+    selectedCycle?.status === "Active";
 
   const totals = useMemo(() => {
     const expenseTotal = expenses.reduce((sum, item) => sum + item.amount, 0);
@@ -159,6 +175,12 @@ export default function App() {
       setGroupMembers([]);
       setCycles([]);
       setSelectedCycle(null);
+      setMembers([]);
+      setExpenses([]);
+      setSettlements([]);
+      setFinanceError(null);
+      setFinanceLoading(false);
+      setExpenseDeletePendingIDs([]);
       return;
     }
 
@@ -265,6 +287,47 @@ export default function App() {
   }, [accessToken, selectedGroup?.id]);
 
   useEffect(() => {
+    if (!accessToken || !selectedGroup || !selectedCycle || selectedCycle.groupId !== selectedGroup.id) {
+      setMembers([]);
+      setExpenses([]);
+      setSettlements([]);
+      setFinanceError(null);
+      setFinanceLoading(false);
+      return;
+    }
+
+    let mounted = true;
+    setFinanceLoading(true);
+    setFinanceError(null);
+
+    loadCycleFinance(selectedGroup.id, selectedCycle.id)
+      .then((result) => {
+        if (mounted) {
+          setExpenses(result.expenses);
+          setMembers(result.members);
+          setSettlements(result.settlements);
+        }
+      })
+      .catch((error: Error) => {
+        if (mounted) {
+          setExpenses([]);
+          setMembers([]);
+          setSettlements([]);
+          setFinanceError(formatErrorMessage(error, "Failed to load cycle finances"));
+        }
+      })
+      .finally(() => {
+        if (mounted) {
+          setFinanceLoading(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [accessToken, selectedGroup?.id, selectedCycle?.id, selectedCycle?.groupId]);
+
+  useEffect(() => {
     if (!inviteFromUrl || !accessToken) {
       return;
     }
@@ -346,8 +409,18 @@ export default function App() {
     setAccessToken(null);
     setProfile(null);
     setGroups([]);
-      setSelectedGroup(null);
+    setSelectedGroup(null);
     setGroupMembers([]);
+    setCycles([]);
+    setSelectedCycle(null);
+    setMembers([]);
+    setExpenses([]);
+    setSettlements([]);
+    setFinanceError(null);
+    setFinanceLoading(false);
+    setExpenseDeletePendingIDs([]);
+    setIsCreateExpenseModalOpen(false);
+    setCreateExpenseError(null);
     setConnectedWalletAddress(null);
     setAuthLoading(false);
   }
@@ -593,6 +666,24 @@ export default function App() {
     setIsCreateCycleModalOpen(true);
   }
 
+  function handleOpenCreateExpenseModal() {
+    if (!canAddExpense) {
+      return;
+    }
+
+    setCreateExpenseError(null);
+    setIsCreateExpenseModalOpen(true);
+  }
+
+  function handleCloseCreateExpenseModal() {
+    if (expenseSubmitting) {
+      return;
+    }
+
+    setIsCreateExpenseModalOpen(false);
+    setCreateExpenseError(null);
+  }
+
   function handleCloseCreateCycleModal() {
     if (cycleSubmitting) {
       return;
@@ -627,6 +718,83 @@ export default function App() {
       setCreateCycleError(formatErrorMessage(error, "Failed to create Settlement Cycle"));
     } finally {
       setCycleSubmitting(false);
+    }
+  }
+
+  async function handleSubmitCreateExpense(input: {
+    description: string;
+    amount: number;
+    paidByWallet: string;
+    splits: Array<{
+      walletAddress: string;
+      amount: number;
+    }>;
+  }) {
+    if (!selectedGroup || !selectedCycle) {
+      setCreateExpenseError("A group and Settlement Cycle must be selected.");
+      return;
+    }
+
+    setExpenseSubmitting(true);
+    setCreateExpenseError(null);
+
+    try {
+      await createCycleExpense(selectedGroup.id, selectedCycle.id, input);
+      const result = await loadCycleFinance(selectedGroup.id, selectedCycle.id);
+      setExpenses(result.expenses);
+      setMembers(result.members);
+      setSettlements(result.settlements);
+      setFinanceError(null);
+      setIsCreateExpenseModalOpen(false);
+    } catch (error) {
+      setCreateExpenseError(formatErrorMessage(error, "Failed to create expense"));
+    } finally {
+      setExpenseSubmitting(false);
+    }
+  }
+
+  async function handleRefreshCycleFinance() {
+    if (!selectedGroup || !selectedCycle || selectedCycle.groupId !== selectedGroup.id) {
+      return;
+    }
+
+    setFinanceLoading(true);
+    setFinanceError(null);
+
+    try {
+      const result = await loadCycleFinance(selectedGroup.id, selectedCycle.id);
+      setExpenses(result.expenses);
+      setMembers(result.members);
+      setSettlements(result.settlements);
+    } catch (error) {
+      setFinanceError(formatErrorMessage(error, "Failed to refresh balances"));
+    } finally {
+      setFinanceLoading(false);
+    }
+  }
+
+  async function handleApproveExpenseDelete(expenseID: string) {
+    if (!selectedGroup || !selectedCycle) {
+      return;
+    }
+
+    setExpenseDeletePendingIDs((currentIDs) =>
+      currentIDs.includes(expenseID) ? currentIDs : [...currentIDs, expenseID],
+    );
+    setFinanceError(null);
+
+    try {
+      await approveExpenseDelete(selectedGroup.id, selectedCycle.id, expenseID);
+      const result = await loadCycleFinance(selectedGroup.id, selectedCycle.id);
+      setExpenses(result.expenses);
+      setMembers(result.members);
+      setSettlements(result.settlements);
+    } catch (error) {
+      setFinanceError(formatErrorMessage(error, "Failed to approve expense deletion"));
+    } finally {
+      setExpenseDeletePendingIDs((currentIDs) =>
+        currentIDs.filter((currentExpenseID) => currentExpenseID !== expenseID),
+      );
     }
   }
 
@@ -713,6 +881,17 @@ export default function App() {
         onClose={handleCloseCreateCycleModal}
         onSubmit={() => void handleSubmitCreateCycle()}
       />
+      <CreateExpenseModal
+        isOpen={isCreateExpenseModalOpen}
+        groupName={selectedGroup?.name ?? null}
+        cycleName={selectedCycle?.name ?? null}
+        members={groupMembers}
+        defaultPaidByWallet={walletAddress}
+        submitting={expenseSubmitting}
+        errorMessage={createExpenseError}
+        onClose={handleCloseCreateExpenseModal}
+        onSubmit={handleSubmitCreateExpense}
+      />
 
       <div className="app-shell">
         <Sidebar
@@ -767,13 +946,40 @@ export default function App() {
           />
 
           {selectedTab === "Overview" && (
-            <OverviewTab members={members} expenses={expenses} badges={badges} />
+            <OverviewTab
+              members={members}
+              expenses={expenses}
+              badges={badges}
+              hasSelectedCycle={hasSelectedCycle}
+              loading={financeLoading}
+              errorMessage={financeError}
+              canAddExpense={canAddExpense}
+              onRefreshBalances={() => void handleRefreshCycleFinance()}
+              onAddExpense={handleOpenCreateExpenseModal}
+            />
           )}
 
-          {selectedTab === "Expenses" && <ExpensesTab expenses={expenses} />}
+          {selectedTab === "Expenses" && (
+            <ExpensesTab
+              expenses={expenses}
+              selectedCycleName={hasSelectedCycle ? selectedCycle?.name ?? null : null}
+              loading={financeLoading}
+              errorMessage={financeError}
+              canAddExpense={canAddExpense}
+              deletingExpenseIDs={expenseDeletePendingIDs}
+              onAddExpense={handleOpenCreateExpenseModal}
+              onApproveDelete={(expenseID) => void handleApproveExpenseDelete(expenseID)}
+            />
+          )}
 
           {selectedTab === "Settlement Plan" && (
-            <SettlementPlanTab settlements={settlements} />
+            <SettlementPlanTab
+              members={members}
+              settlements={settlements}
+              selectedCycleName={hasSelectedCycle ? selectedCycle?.name ?? null : null}
+              loading={financeLoading}
+              errorMessage={financeError}
+            />
           )}
 
           {selectedTab === "Archive" && (
@@ -783,6 +989,19 @@ export default function App() {
       </div>
     </div>
   );
+}
+
+async function loadCycleFinance(groupID: string, cycleID: string) {
+  const [expensesResult, summaryResult] = await Promise.all([
+    fetchCycleExpenses(groupID, cycleID),
+    fetchSettlementSummary(groupID, cycleID),
+  ]);
+
+  return {
+    expenses: expensesResult.expenses,
+    members: summaryResult.summary.members,
+    settlements: summaryResult.summary.settlements,
+  };
 }
 
 function extractInviteCode(value: string) {

@@ -215,6 +215,93 @@
   border: 1px solid var(--border-soft);
 }
 
+.simple-row-stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.expense-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.expense-row-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.expense-splits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.expense-split-pill {
+  border-radius: 999px;
+  border: 1px solid rgba(83, 214, 174, 0.18);
+  background: rgba(83, 214, 174, 0.1);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 12px;
+}
+
+.expense-delete-button {
+  min-width: 176px;
+}
+
+.expense-delete-button.approved {
+  border-color: rgba(83, 214, 174, 0.24);
+  color: var(--accent);
+}
+
+.expense-delete-copy {
+  margin: 10px 0 0;
+  color: var(--warning);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.amount-positive {
+  color: var(--accent);
+}
+
+.amount-negative {
+  color: #ff9eb1;
+}
+
+.section-error {
+  margin: 18px 0 0;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 113, 143, 0.18);
+  background: rgba(255, 113, 143, 0.08);
+  color: #ffb3c3;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.settlement-layout {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.settlement-column {
+  min-width: 0;
+}
+
+.settlement-column-title {
+  margin: 0 0 14px;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+
 .ghost-button,
 .primary-chip,
 .btn {
@@ -295,6 +382,12 @@
 
   .highlight-card-header,
   .section-card-header {
+    flex-direction: column;
+  }
+
+  .expense-row-top,
+  .settlement-layout {
+    grid-template-columns: 1fr;
     flex-direction: column;
   }
 
