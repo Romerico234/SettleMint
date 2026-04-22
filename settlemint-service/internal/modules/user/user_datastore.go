@@ -25,9 +25,10 @@ func NewDatastore(database *mongo.Database) *Store {
 
 func (s *Store) EnsureProfile(ctx context.Context, user auth.User) (Profile, error) {
 	now := time.Now().UTC()
+	walletAddress := strings.TrimSpace(user.WalletAddress)
 	update := bson.M{
 		"$setOnInsert": bson.M{
-			"_id":          user.ID,
+			"_id":          bson.NewObjectID(),
 			"display_name": "",
 			"created_at":   now,
 		},
@@ -36,18 +37,19 @@ func (s *Store) EnsureProfile(ctx context.Context, user auth.User) (Profile, err
 		},
 	}
 
-	if walletAddress := strings.TrimSpace(user.WalletAddress); walletAddress != "" {
+	if walletAddress != "" {
 		update["$set"].(bson.M)["wallet_address"] = walletAddress
 	}
 
-	return s.upsertProfile(ctx, user.ID, update)
+	return s.upsertProfile(ctx, walletAddress, update)
 }
 
 func (s *Store) UpsertProfile(ctx context.Context, authUser auth.User, input UpdateProfileRequest) (Profile, error) {
 	now := time.Now().UTC()
+	walletAddress := strings.TrimSpace(authUser.WalletAddress)
 	update := bson.M{
 		"$setOnInsert": bson.M{
-			"_id":        authUser.ID,
+			"_id":        bson.NewObjectID(),
 			"created_at": now,
 		},
 		"$set": bson.M{
@@ -56,16 +58,16 @@ func (s *Store) UpsertProfile(ctx context.Context, authUser auth.User, input Upd
 		},
 	}
 
-	if walletAddress := strings.TrimSpace(authUser.WalletAddress); walletAddress != "" {
+	if walletAddress != "" {
 		update["$set"].(bson.M)["wallet_address"] = walletAddress
 	}
 
-	return s.upsertProfile(ctx, authUser.ID, update)
+	return s.upsertProfile(ctx, walletAddress, update)
 }
 
-func (s *Store) upsertProfile(ctx context.Context, id string, update bson.M) (Profile, error) {
+func (s *Store) upsertProfile(ctx context.Context, walletAddress string, update bson.M) (Profile, error) {
 	var document struct {
-		ID            string    `bson:"_id"`
+		ID            any       `bson:"_id"`
 		DisplayName   string    `bson:"display_name"`
 		WalletAddress string    `bson:"wallet_address"`
 		CreatedAt     time.Time `bson:"created_at"`
@@ -74,7 +76,7 @@ func (s *Store) upsertProfile(ctx context.Context, id string, update bson.M) (Pr
 
 	if err := s.collection.FindOneAndUpdate(
 		ctx,
-		bson.M{"_id": id},
+		bson.M{"wallet_address": walletAddress},
 		update,
 		options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After),
 	).Decode(&document); err != nil {
@@ -82,10 +84,21 @@ func (s *Store) upsertProfile(ctx context.Context, id string, update bson.M) (Pr
 	}
 
 	return Profile{
-		ID:            document.ID,
+		ID:            profileIDString(document.ID),
 		DisplayName:   document.DisplayName,
 		WalletAddress: document.WalletAddress,
 		CreatedAt:     document.CreatedAt,
 		UpdatedAt:     document.UpdatedAt,
 	}, nil
+}
+
+func profileIDString(value any) string {
+	switch typed := value.(type) {
+	case bson.ObjectID:
+		return typed.Hex()
+	case string:
+		return typed
+	default:
+		return fmt.Sprintf("%v", typed)
+	}
 }
