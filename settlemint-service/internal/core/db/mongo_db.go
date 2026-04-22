@@ -114,5 +114,21 @@ func EnsureCollections(ctx context.Context, database *mongo.Database) error {
 		return fmt.Errorf("create group_memberships indexes: %w", err)
 	}
 
+	cycles := database.Collection("cycles")
+
+	_, err = cycles.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{
+			Keys:    bson.D{{Key: "group_id", Value: 1}, {Key: "created_at", Value: -1}},
+			Options: options.Index().SetName("cycles_group_id_created_at_idx"),
+		},
+		{
+			Keys:    bson.D{{Key: "group_id", Value: 1}, {Key: "status", Value: 1}},
+			Options: options.Index().SetName("cycles_group_id_status_idx"),
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("create cycles indexes: %w", err)
+	}
+
 	return nil
 }

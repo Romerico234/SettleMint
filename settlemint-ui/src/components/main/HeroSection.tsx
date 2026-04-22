@@ -127,7 +127,7 @@ export default function HeroSection({
       <StatCard
         label="Verified On-Chain"
         value={String(verifiedCount)}
-        caption="Settlements with stored tx proof"
+        caption="Settlements with stored transaction proof"
       />
     </section>
   );

@@ -3,6 +3,7 @@ import type { Cycle, Group, GroupFilterMode, GroupSortMode, Tab } from "../../sh
 import type { UserProfile } from "../../api/users";
 import filterOnIcon from "../../assets/filter-on.png";
 import filterOffIcon from "../../assets/filter-off.png";
+import { formatDisplayDateTime } from "../../lib/appHelpers";
 import GroupsFilterMenu from "../groups/GroupsFilterMenu";
 import "./Sidebar.css";
 
@@ -340,7 +341,7 @@ export default function Sidebar({
                       {cycle.status}
                     </span>
                   </div>
-                  <div className="sidebar-cycle-date">{cycle.createdAt}</div>
+                  <div className="sidebar-cycle-date">{formatDisplayDateTime(cycle.createdAt)}</div>
                 </button>
               );
             })

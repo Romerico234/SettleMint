@@ -4,9 +4,25 @@ type OverviewTabProps = {
   members: Member[];
   expenses: Expense[];
   badges: Badge[];
+  hasSelectedCycle: boolean;
+  loading: boolean;
+  errorMessage: string | null;
+  canAddExpense: boolean;
+  onRefreshBalances: () => void;
+  onAddExpense: () => void;
 };
 
-export default function OverviewTab({ members, expenses, badges }: OverviewTabProps) {
+export default function OverviewTab({
+  members,
+  expenses,
+  badges,
+  hasSelectedCycle,
+  loading,
+  errorMessage,
+  canAddExpense,
+  onRefreshBalances,
+  onAddExpense,
+}: OverviewTabProps) {
   return (
     <section className="dashboard-grid dashboard-grid-body">
       <article className="dashboard-card section-card">
@@ -17,16 +33,28 @@ export default function OverviewTab({ members, expenses, badges }: OverviewTabPr
               Positive means they are owed, negative means they owe.
             </p>
           </div>
-          <button className="ghost-button" type="button">
+          <button className="ghost-button" type="button" onClick={onRefreshBalances} disabled={!hasSelectedCycle || loading}>
             Refresh Balances
           </button>
         </div>
-        {members.length > 0 ? (
+        {errorMessage && <p className="section-error">{errorMessage}</p>}
+        {loading ? (
+          <p className="empty-copy">Refreshing balances and settlement data...</p>
+        ) : !hasSelectedCycle ? (
+          <p className="empty-copy">Select a Settlement Cycle to compute balances.</p>
+        ) : members.length > 0 ? (
           <div className="simple-list">
             {members.map((member) => (
-              <div className="simple-row" key={member.id}>
-                <span>{member.name}</span>
-                <strong>{member.balance >= 0 ? "+" : "-"}${Math.abs(member.balance).toFixed(2)}</strong>
+              <div className="simple-row" key={member.walletAddress}>
+                <div>
+                  <strong>{member.displayName.trim() || shortWallet(member.walletAddress)}</strong>
+                  <p className="row-copy">
+                    Paid ${member.totalPaid.toFixed(2)} • Owes ${member.totalOwed.toFixed(2)}
+                  </p>
+                </div>
+                <strong className={member.balance >= 0 ? "amount-positive" : "amount-negative"}>
+                  {member.balance >= 0 ? "+" : "-"}${Math.abs(member.balance).toFixed(2)}
+                </strong>
               </div>
             ))}
           </div>
@@ -41,15 +69,24 @@ export default function OverviewTab({ members, expenses, badges }: OverviewTabPr
             <h3 className="section-card-title">Recent Expenses</h3>
             <p className="section-card-copy">Shared costs inside the active Settlement Cycle.</p>
           </div>
-          <button className="primary-chip" type="button">
+          <button className="primary-chip" type="button" onClick={onAddExpense} disabled={!canAddExpense}>
             Add Expense
           </button>
         </div>
-        {expenses.length > 0 ? (
+        {loading ? (
+          <p className="empty-copy">Loading current cycle expenses...</p>
+        ) : !hasSelectedCycle ? (
+          <p className="empty-copy">Select a Settlement Cycle to start adding expenses.</p>
+        ) : expenses.length > 0 ? (
           <div className="simple-list">
-            {expenses.map((expense) => (
+            {expenses.slice(0, 5).map((expense) => (
               <div className="simple-row" key={expense.id}>
-                <span>{expense.description}</span>
+                <div>
+                  <strong>{expense.description}</strong>
+                  <p className="row-copy">
+                    Paid by {expense.paidByDisplayName.trim() || shortWallet(expense.paidByWallet)}
+                  </p>
+                </div>
                 <strong>${expense.amount.toFixed(2)}</strong>
               </div>
             ))}
@@ -83,4 +120,12 @@ export default function OverviewTab({ members, expenses, badges }: OverviewTabPr
       </article>
     </section>
   );
+}
+
+function shortWallet(walletAddress: string) {
+  if (!walletAddress) {
+    return "Unknown wallet";
+  }
+
+  return `${walletAddress.slice(0, 8)}...${walletAddress.slice(-4)}`;
 }
