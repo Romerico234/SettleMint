@@ -20,3 +20,16 @@ export function formatErrorMessage(error: unknown, fallbackMessage: string) {
 
   return message.charAt(0).toUpperCase() + message.slice(1);
 }
+
+export function formatDisplayDateTime(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown time";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}

@@ -1,4 +1,5 @@
 import type { Cycle } from "../../shared/types";
+import { formatDisplayDateTime } from "../../lib/appHelpers";
 
 type ArchiveTabProps = {
   archivedCycles: Cycle[];
@@ -21,7 +22,7 @@ export default function ArchiveTab({ archivedCycles }: ArchiveTabProps) {
             {archivedCycles.map((cycle) => (
               <div className="simple-row" key={cycle.id}>
                 <span>{cycle.name}</span>
-                <span>{cycle.createdAt}</span>
+                <span>{formatDisplayDateTime(cycle.createdAt)}</span>
               </div>
             ))}
           </div>

@@ -32,6 +32,7 @@ export function useCycleFinance({
   const hasSelectedCycle = Boolean(
     selectedGroup && selectedCycle && selectedCycle.groupId === selectedGroup.id,
   );
+  
   const canAddExpense =
     Boolean(accessToken && selectedGroup && selectedCycle && groupMembers.length > 0) &&
     selectedCycle?.groupId === selectedGroup?.id &&

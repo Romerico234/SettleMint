@@ -94,6 +94,7 @@ export function useGroupWorkspace({
   }, [groups, groupFilterMode, groupSortMode]);
 
   const archivedCycles = cycles.filter((cycle) => cycle.status === "Archived");
+  
   const canCreateSettlementCycle =
     Boolean(accessToken && selectedGroup && walletAddress) &&
     (selectedGroup?.currentUserRole === "owner" ||

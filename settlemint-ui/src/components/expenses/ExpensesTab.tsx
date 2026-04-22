@@ -1,4 +1,5 @@
 import type { Expense } from "../../shared/types";
+import { formatDisplayDateTime } from "../../lib/appHelpers";
 
 type ExpensesTabProps = {
   expenses: Expense[];
@@ -51,7 +52,7 @@ export default function ExpensesTab({
                     <strong>{expense.description}</strong>
                     <p className="row-copy">
                       Paid by {expense.paidByDisplayName.trim() || shortWallet(expense.paidByWallet)} on{" "}
-                      {formatDate(expense.createdAt)}
+                      {formatDisplayDateTime(expense.createdAt)}
                     </p>
                     {expense.deletePending && (
                       <p className="expense-delete-copy">
@@ -99,18 +100,6 @@ export default function ExpensesTab({
       </article>
     </section>
   );
-}
-
-function formatDate(value: string) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? "Unknown time"
-    : new Intl.DateTimeFormat(undefined, {
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      }).format(date);
 }
 
 function shortWallet(walletAddress: string) {
