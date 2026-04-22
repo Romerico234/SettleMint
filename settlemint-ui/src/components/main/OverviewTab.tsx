@@ -1,9 +1,8 @@
-import type { Badge, Expense, Member } from "../../shared/types";
+import type { Expense, Member } from "../../shared/types";
 
 type OverviewTabProps = {
   members: Member[];
   expenses: Expense[];
-  badges: Badge[];
   hasSelectedCycle: boolean;
   loading: boolean;
   errorMessage: string | null;
@@ -15,7 +14,6 @@ type OverviewTabProps = {
 export default function OverviewTab({
   members,
   expenses,
-  badges,
   hasSelectedCycle,
   loading,
   errorMessage,
@@ -93,29 +91,6 @@ export default function OverviewTab({
           </div>
         ) : (
           <p className="empty-copy">No recent expenses.</p>
-        )}
-      </article>
-
-      <article className="dashboard-card section-card section-card-wide">
-        <div className="section-card-header">
-          <div>
-            <h3 className="section-card-title">Badge Progress</h3>
-            <p className="section-card-copy">
-              Optional on-chain achievements for engaged group members.
-            </p>
-          </div>
-        </div>
-        {badges.length > 0 ? (
-          <div className="simple-list">
-            {badges.map((badge) => (
-              <div className="simple-row" key={badge.id}>
-                <span>{badge.name}</span>
-                <span>{badge.description}</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="empty-copy">No badges available.</p>
         )}
       </article>
     </section>

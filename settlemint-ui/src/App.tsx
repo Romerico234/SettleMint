@@ -1,6 +1,5 @@
 import { useState } from "react";
 import "./App.css";
-
 import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
 import CreateGroupModal from "./components/groups/CreateGroupModal";
@@ -64,8 +63,6 @@ export default function App() {
     groupMembers: groupDirectory.groups.members,
     walletAddress,
   });
-
-  const [badges] = useState([]);
 
   async function handleSignOut() {
     await signOut();
@@ -189,7 +186,6 @@ export default function App() {
             <OverviewTab
               members={settlementLedger.summary.members}
               expenses={settlementLedger.summary.expenses}
-              badges={badges}
               hasSelectedCycle={settlementLedger.cycle.hasSelected}
               loading={settlementLedger.summary.loading}
               errorMessage={settlementLedger.summary.errorMessage}
