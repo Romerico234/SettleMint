@@ -106,7 +106,7 @@ func loadMongoDatabase(appEnv Environment) string {
 	}
 
 	if appEnv == EnvironmentDevelopment {
-		return "settlemint_dev"
+		return "settlemint_db_dev"
 	}
 
 	return ""

@@ -1,9 +1,21 @@
+import type { GroupMember } from "../../shared/types";
+
 type HeroSectionProps = {
-  members: { id: string }[];
-  selectedCycle: { name: string } | null;
+  currentGroup: {
+    id: string;
+    name: string;
+    ownerWallet: string;
+    memberCount: number;
+    currentUserRole?: "owner" | "member";
+  } | null;
+  currentWalletAddress: string | null;
+  groupMembers: GroupMember[];
   expenseTotal: number;
   pendingCount: number;
   verifiedCount: number;
+  actionLoading?: boolean;
+  onLeaveGroup?: () => void;
+  onDeleteGroup?: () => void;
 };
 
 type StatCardProps = {
@@ -23,12 +35,21 @@ function StatCard({ label, value, caption }: StatCardProps) {
 }
 
 export default function HeroSection({
-  members,
-  selectedCycle,
+  currentGroup,
+  currentWalletAddress,
+  groupMembers,
   expenseTotal,
   pendingCount,
   verifiedCount,
+  actionLoading = false,
+  onLeaveGroup,
+  onDeleteGroup,
 }: HeroSectionProps) {
+  const isOwner =
+    currentGroup?.currentUserRole === "owner" ||
+    (Boolean(currentGroup && currentWalletAddress) &&
+      currentGroup?.ownerWallet.toLowerCase() === currentWalletAddress?.toLowerCase());
+
   return (
     <section className="dashboard-grid dashboard-grid-hero">
       <article className="dashboard-card highlight-card">
@@ -36,19 +57,61 @@ export default function HeroSection({
           <div>
             <div className="stat-card-label">Current Group</div>
             <h2 className="highlight-card-title">
-              {selectedCycle?.name || "No active Settlement Cycle"}
+              {currentGroup?.name || "No active Group"}
             </h2>
           </div>
           <div className="member-pill">
-            <strong>{members.length}</strong>
+            <strong>{currentGroup?.memberCount ?? 0}</strong>
             <span>Members</span>
           </div>
         </div>
         <p className="highlight-card-caption">
-          {members.length > 0
-            ? "Balances and activity will update inside the active Settlement Cycle."
-            : "No group members loaded."}
+          {currentGroup
+            ? "Group balances and activity will update here as Settlement Cycles are created."
+            : "Create a group to start inviting members and organizing Settlement Cycles."}
         </p>
+        {currentGroup && groupMembers.length > 0 && (
+          <div className="highlight-card-members">
+            {groupMembers.map((member) => (
+              <div className="highlight-card-member-row" key={member.walletAddress}>
+                <div>
+                  <div className="highlight-card-member-name">
+                    {member.displayName.trim() || "Unnamed member"}
+                  </div>
+                  <div className="highlight-card-member-wallet">
+                    {shortWallet(member.walletAddress)}
+                  </div>
+                </div>
+                <span className={`pill ${member.role === "owner" ? "pill-active" : "pill-archived"}`}>
+                  {member.role === "owner" ? "Owner" : "Member"}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+        {currentGroup && (
+          <div className="highlight-card-actions">
+            {isOwner ? (
+              <button
+                className="btn btn-secondary highlight-card-action-button"
+                type="button"
+                onClick={onDeleteGroup}
+                disabled={actionLoading}
+              >
+                {actionLoading ? "Deleting..." : "Delete Group"}
+              </button>
+            ) : (
+              <button
+                className="btn btn-secondary highlight-card-action-button"
+                type="button"
+                onClick={onLeaveGroup}
+                disabled={actionLoading}
+              >
+                {actionLoading ? "Leaving..." : "Leave Group"}
+              </button>
+            )}
+          </div>
+        )}
       </article>
 
       <StatCard
@@ -68,4 +131,12 @@ export default function HeroSection({
       />
     </section>
   );
+}
+
+function shortWallet(walletAddress: string) {
+  if (!walletAddress) {
+    return "Wallet unavailable";
+  }
+
+  return `${walletAddress.slice(0, 8)}...${walletAddress.slice(-4)}`;
 }

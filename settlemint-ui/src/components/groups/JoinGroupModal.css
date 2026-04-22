@@ -1,0 +1,129 @@
+.join-group-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(3, 10, 8, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.join-group-modal {
+  width: min(100%, 560px);
+  border-radius: 28px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(17, 47, 40, 0.98), rgba(9, 24, 20, 0.98));
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.42);
+  padding: 28px;
+}
+
+.join-group-modal-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.join-group-modal-eyebrow {
+  color: var(--secondary);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.join-group-modal-title {
+  margin: 8px 0 0;
+  font-size: 28px;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.join-group-modal-copy {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.join-group-modal-close {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.join-group-modal-body {
+  margin-top: 24px;
+}
+
+.join-group-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.join-group-modal-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.join-group-modal-input {
+  width: 100%;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: rgba(5, 15, 12, 0.78);
+  color: var(--text);
+  padding: 16px 18px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.join-group-modal-input:focus {
+  border-color: rgba(83, 214, 174, 0.52);
+  box-shadow: 0 0 0 4px rgba(83, 214, 174, 0.12);
+}
+
+.join-group-modal-input::placeholder {
+  color: var(--muted);
+}
+
+.join-group-modal-error {
+  margin: 12px 0 0;
+  color: #fca5a5;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.join-group-modal-actions {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.join-group-modal-button {
+  width: auto;
+  min-width: 150px;
+}
+
+@media (max-width: 760px) {
+  .join-group-modal {
+    padding: 22px;
+  }
+
+  .join-group-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .join-group-modal-button {
+    width: 100%;
+  }
+}
