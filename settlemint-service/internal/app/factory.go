@@ -4,6 +4,7 @@ import (
 	"settlemint-service/internal/core/config"
 	"settlemint-service/internal/core/server"
 	"settlemint-service/internal/modules/auth"
+	"settlemint-service/internal/modules/cycles"
 	"settlemint-service/internal/modules/groups"
 	"settlemint-service/internal/modules/user"
 
@@ -26,9 +27,11 @@ func (f Factory) BuildModules() (auth.TokenVerifier, []server.RouteModule) {
 	authVerifier := auth.NewWalletAuth(f.config, f.db)
 	userDatastore := user.NewDatastore(f.db)
 	groupDatastore := groups.NewDatastore(f.db)
+	cycleDatastore := cycles.NewDatastore(f.db)
 
 	return authVerifier, []server.RouteModule{
 		auth.NewModule(authVerifier),
+		cycles.NewModule(cycleDatastore, authVerifier),
 		groups.NewModule(groupDatastore, authVerifier),
 		user.NewModule(userDatastore, authVerifier),
 	}

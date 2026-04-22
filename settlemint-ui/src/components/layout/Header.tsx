@@ -2,6 +2,7 @@ import "./Header.css";
 
 type HeaderProps = {
   actionsDisabled?: boolean;
+  showSettlementCycleAction?: boolean;
   onCreateGroup?: () => void;
   onJoinGroup?: () => void;
   onCreateSettlementPeriod?: () => void;
@@ -9,6 +10,7 @@ type HeaderProps = {
 
 export default function Header({
   actionsDisabled = false,
+  showSettlementCycleAction = true,
   onCreateGroup,
   onJoinGroup,
   onCreateSettlementPeriod,
@@ -41,14 +43,16 @@ export default function Header({
         >
           Join Group
         </button>
-        <button
-          className="btn btn-primary"
-          type="button"
-          onClick={onCreateSettlementPeriod}
-          disabled={actionsDisabled}
-        >
-          New Settlement Cycle
-        </button>
+        {showSettlementCycleAction && (
+          <button
+            className="btn btn-primary"
+            type="button"
+            onClick={onCreateSettlementPeriod}
+            disabled={actionsDisabled}
+          >
+            New Settlement Cycle
+          </button>
+        )}
       </div>
     </header>
   );

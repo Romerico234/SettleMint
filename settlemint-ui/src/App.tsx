@@ -17,6 +17,7 @@ import Header from "./components/layout/Header";
 import CreateGroupModal from "./components/groups/CreateGroupModal";
 import GroupActionModal from "./components/groups/GroupActionModal";
 import JoinGroupModal from "./components/groups/JoinGroupModal";
+import CreateSettlementCycleModal from "./components/cycles/CreateSettlementCycleModal";
 import HeroSection from "./components/main/HeroSection";
 import OverviewTab from "./components/main/OverviewTab";
 import ExpensesTab from "./components/expenses/ExpensesTab";
@@ -35,6 +36,7 @@ import {
   joinGroup,
   leaveGroup,
 } from "./api/groups";
+import { createSettlementCycle, fetchGroupCycles } from "./api/cycles";
 import { fetchMyProfile, updateMyProfile } from "./api/users";
 import { clearAuthToken, getAuthToken, setAuthToken } from "./lib/auth";
 import {
@@ -47,8 +49,11 @@ import type { UserProfile } from "./api/users";
 import type { Group, GroupMember } from "./shared/types";
 
 export default function App() {
-  const inviteFromUrl = new URLSearchParams(window.location.search).get("invite")?.trim() || "";
-  const [selectedTab, setSelectedTab] = useState<Tab>("Overview");
+  const initialRouteState = getRouteState();
+  const [inviteFromUrl, setInviteFromUrl] = useState(initialRouteState.inviteCode);
+  const [selectedTab, setSelectedTab] = useState<Tab>(initialRouteState.tab);
+  const [requestedGroupID, setRequestedGroupID] = useState(initialRouteState.groupId);
+  const [requestedCycleID, setRequestedCycleID] = useState(initialRouteState.cycleId);
   const [accessToken, setAccessToken] = useState<string | null>(() => getAuthToken());
   const [connectedWalletAddress, setConnectedWalletAddress] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -68,13 +73,17 @@ export default function App() {
   const [groupActionSubmitting, setGroupActionSubmitting] = useState(false);
   const [pendingGroupAction, setPendingGroupAction] = useState<"leave" | "delete" | null>(null);
   const [groupActionError, setGroupActionError] = useState<string | null>(null);
+  const [isCreateCycleModalOpen, setIsCreateCycleModalOpen] = useState(false);
+  const [cycleNameDraft, setCycleNameDraft] = useState("");
+  const [cycleSubmitting, setCycleSubmitting] = useState(false);
+  const [createCycleError, setCreateCycleError] = useState<string | null>(null);
   const [groupFilterMode, setGroupFilterMode] = useState<GroupFilterMode>("all");
   const [groupSortMode, setGroupSortMode] = useState<GroupSortMode>("date");
 
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
-  const [cycles] = useState<Cycle[]>([]);
+  const [cycles, setCycles] = useState<Cycle[]>([]);
   const [selectedCycle, setSelectedCycle] = useState<Cycle | null>(null);
 
   const [members] = useState<Member[]>([]);
@@ -108,6 +117,10 @@ export default function App() {
     );
     return nextGroups;
   }, [groups, groupFilterMode, groupSortMode]);
+  const canCreateSettlementCycle =
+    Boolean(accessToken && selectedGroup && walletAddress) &&
+    (selectedGroup?.currentUserRole === "owner" ||
+      selectedGroup?.ownerWallet.toLowerCase() === walletAddress?.toLowerCase());
 
   const totals = useMemo(() => {
     const expenseTotal = expenses.reduce((sum, item) => sum + item.amount, 0);
@@ -122,11 +135,30 @@ export default function App() {
   }, [expenses, settlements]);
 
   useEffect(() => {
+    function handlePopState() {
+      const nextRouteState = getRouteState();
+      setSelectedTab(nextRouteState.tab);
+      setRequestedGroupID(nextRouteState.groupId);
+      setRequestedCycleID(nextRouteState.cycleId);
+      setInviteFromUrl(nextRouteState.inviteCode);
+      setJoinInviteCodeDraft(nextRouteState.inviteCode);
+    }
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!accessToken) {
       setProfile(null);
       setGroups([]);
       setSelectedGroup(null);
       setGroupMembers([]);
+      setCycles([]);
+      setSelectedCycle(null);
       return;
     }
 
@@ -139,14 +171,17 @@ export default function App() {
           setConnectedWalletAddress(profileResult.profile.walletAddress || null);
           setGroups(groupsResult.groups);
           setSelectedGroup((currentSelectedGroup) => {
+            const requestedGroup =
+              groupsResult.groups.find((group) => group.id === requestedGroupID) ?? null;
             if (currentSelectedGroup) {
               return (
                 groupsResult.groups.find((group) => group.id === currentSelectedGroup.id) ??
+                requestedGroup ??
                 groupsResult.groups[0] ??
                 null
               );
             }
-            return groupsResult.groups[0] ?? null;
+            return requestedGroup ?? groupsResult.groups[0] ?? null;
           });
         }
       })
@@ -162,7 +197,47 @@ export default function App() {
     return () => {
       mounted = false;
     };
-  }, [accessToken]);
+  }, [accessToken, requestedGroupID]);
+
+  useEffect(() => {
+    if (!accessToken || !selectedGroup) {
+      setCycles([]);
+      setSelectedCycle(null);
+      return;
+    }
+
+    let mounted = true;
+
+    fetchGroupCycles(selectedGroup.id)
+      .then((result) => {
+        if (mounted) {
+          setCycles(result.cycles);
+          setSelectedCycle((currentSelectedCycle) => {
+            const requestedCycle =
+              result.cycles.find((cycle) => cycle.id === requestedCycleID) ?? null;
+            if (currentSelectedCycle) {
+              return (
+                result.cycles.find((cycle) => cycle.id === currentSelectedCycle.id) ??
+                requestedCycle ??
+                result.cycles[0] ??
+                null
+              );
+            }
+            return requestedCycle ?? result.cycles[0] ?? null;
+          });
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setCycles([]);
+          setSelectedCycle(null);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [accessToken, selectedGroup?.id, requestedCycleID]);
 
   useEffect(() => {
     if (!accessToken || !selectedGroup) {
@@ -205,9 +280,20 @@ export default function App() {
     }
 
     if (!selectedGroup || !visibleGroups.some((group) => group.id === selectedGroup.id)) {
-      setSelectedGroup(visibleGroups[0]);
+      const requestedGroup =
+        visibleGroups.find((group) => group.id === requestedGroupID) ?? visibleGroups[0];
+      setSelectedGroup(requestedGroup);
     }
-  }, [visibleGroups, selectedGroup]);
+  }, [visibleGroups, selectedGroup, requestedGroupID]);
+
+  useEffect(() => {
+    syncBrowserRoute({
+      tab: selectedTab,
+      groupId: selectedGroup?.id ?? "",
+      cycleId: selectedCycle?.id ?? "",
+      inviteCode: inviteFromUrl,
+    });
+  }, [selectedTab, selectedGroup?.id, selectedCycle?.id, inviteFromUrl]);
 
   async function handleWalletSignIn() {
     if (accessToken && authenticatedWalletAddress) {
@@ -387,6 +473,7 @@ export default function App() {
       return updatedGroups;
     });
     setSelectedGroup(nextGroup);
+    setRequestedGroupID(nextGroup.id);
   }
 
   function removeGroup(groupID: string) {
@@ -400,6 +487,7 @@ export default function App() {
       });
       return nextGroups;
     });
+    setRequestedGroupID("");
   }
 
   function handleOpenJoinGroupModal() {
@@ -434,6 +522,7 @@ export default function App() {
       upsertGroup(result.group);
       setIsJoinGroupModalOpen(false);
       setJoinInviteCodeDraft("");
+      setInviteFromUrl("");
 
       const url = new URL(window.location.href);
       url.searchParams.delete("invite");
@@ -483,8 +572,62 @@ export default function App() {
     }
   }
 
+  function upsertCycle(nextCycle: Cycle) {
+    setCycles((currentCycles) => {
+      const existingIndex = currentCycles.findIndex((cycle) => cycle.id === nextCycle.id);
+      if (existingIndex === -1) {
+        return [nextCycle, ...currentCycles];
+      }
+
+      const updatedCycles = [...currentCycles];
+      updatedCycles[existingIndex] = nextCycle;
+      return updatedCycles;
+    });
+    setSelectedCycle(nextCycle);
+    setRequestedCycleID(nextCycle.id);
+  }
+
   function handleCreateSettlementPeriod() {
-    setWalletError("Settlement Cycle creation UI is restored, but the backend flow has not been implemented yet.");
+    setCreateCycleError(null);
+    setCycleNameDraft("");
+    setIsCreateCycleModalOpen(true);
+  }
+
+  function handleCloseCreateCycleModal() {
+    if (cycleSubmitting) {
+      return;
+    }
+
+    setIsCreateCycleModalOpen(false);
+    setCycleNameDraft("");
+    setCreateCycleError(null);
+  }
+
+  async function handleSubmitCreateCycle() {
+    if (!selectedGroup) {
+      setCreateCycleError("A group must be selected.");
+      return;
+    }
+
+    const name = cycleNameDraft.trim();
+    if (!name) {
+      setCreateCycleError("Settlement Cycle name is required.");
+      return;
+    }
+
+    setCycleSubmitting(true);
+    setCreateCycleError(null);
+
+    try {
+      const result = await createSettlementCycle(selectedGroup.id, { name });
+      upsertCycle(result.cycle);
+      setIsCreateCycleModalOpen(false);
+      setCycleNameDraft("");
+    } catch (error) {
+      setCreateCycleError(formatErrorMessage(error, "Failed to create Settlement Cycle"));
+    } finally {
+      setCycleSubmitting(false);
+    }
   }
 
   function handleCloseGroupActionModal() {
@@ -555,6 +698,21 @@ export default function App() {
         onClose={handleCloseGroupActionModal}
         onConfirm={handleConfirmGroupAction}
       />
+      <CreateSettlementCycleModal
+        isOpen={isCreateCycleModalOpen}
+        groupName={selectedGroup?.name ?? null}
+        cycleName={cycleNameDraft}
+        submitting={cycleSubmitting}
+        errorMessage={createCycleError}
+        onCycleNameChange={(value) => {
+          setCycleNameDraft(value);
+          if (createCycleError) {
+            setCreateCycleError(null);
+          }
+        }}
+        onClose={handleCloseCreateCycleModal}
+        onSubmit={() => void handleSubmitCreateCycle()}
+      />
 
       <div className="app-shell">
         <Sidebar
@@ -568,22 +726,29 @@ export default function App() {
           onDisconnect={handleSignOut}
           onSaveProfile={handleSaveProfile}
           selectedTab={selectedTab}
-          setSelectedTab={setSelectedTab}
+          setSelectedTab={(tab) => setSelectedTab(tab)}
           groups={visibleGroups}
           selectedGroup={selectedGroup}
-          setSelectedGroup={setSelectedGroup}
+          setSelectedGroup={(group) => {
+            setSelectedGroup(group);
+            setRequestedGroupID(group.id);
+          }}
           groupFilterMode={groupFilterMode}
           groupSortMode={groupSortMode}
           onGroupFilterModeChange={setGroupFilterMode}
           onGroupSortModeChange={setGroupSortMode}
           cycles={cycles}
           selectedCycle={selectedCycle}
-          setSelectedCycle={setSelectedCycle}
+          setSelectedCycle={(cycle) => {
+            setSelectedCycle(cycle);
+            setRequestedCycleID(cycle.id);
+          }}
         />
 
         <main className="app-main">
           <Header
             actionsDisabled={!accessToken}
+            showSettlementCycleAction={canCreateSettlementCycle}
             onCreateGroup={handleCreateGroup}
             onJoinGroup={handleOpenJoinGroupModal}
             onCreateSettlementPeriod={handleCreateSettlementPeriod}
@@ -641,4 +806,80 @@ function formatErrorMessage(error: unknown, fallbackMessage: string) {
       : fallbackMessage;
 
   return message.charAt(0).toUpperCase() + message.slice(1);
+}
+
+function getRouteState() {
+  const url = new URL(window.location.href);
+  const pathname = url.pathname.toLowerCase();
+
+  return {
+    tab: tabFromPathname(pathname),
+    groupId: url.searchParams.get("group")?.trim() || "",
+    cycleId: url.searchParams.get("cycle")?.trim() || "",
+    inviteCode: url.searchParams.get("invite")?.trim() || "",
+  };
+}
+
+function syncBrowserRoute(input: {
+  tab: Tab;
+  groupId: string;
+  cycleId: string;
+  inviteCode: string;
+}) {
+  const nextUrl = new URL(window.location.href);
+  nextUrl.pathname = pathnameForTab(input.tab);
+
+  if (input.groupId) {
+    nextUrl.searchParams.set("group", input.groupId);
+  } else {
+    nextUrl.searchParams.delete("group");
+  }
+
+  if (input.cycleId) {
+    nextUrl.searchParams.set("cycle", input.cycleId);
+  } else {
+    nextUrl.searchParams.delete("cycle");
+  }
+
+  if (input.inviteCode) {
+    nextUrl.searchParams.set("invite", input.inviteCode);
+  } else {
+    nextUrl.searchParams.delete("invite");
+  }
+
+  const nextRelativeUrl = `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`;
+  const currentRelativeUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+  if (nextRelativeUrl !== currentRelativeUrl) {
+    window.history.replaceState({}, "", nextRelativeUrl);
+  }
+}
+
+function tabFromPathname(pathname: string): Tab {
+  switch (pathname) {
+    case "/expenses":
+      return "Expenses";
+    case "/settlement-plan":
+      return "Settlement Plan";
+    case "/archive":
+      return "Archive";
+    case "/dashboard":
+    case "/":
+    default:
+      return "Overview";
+  }
+}
+
+function pathnameForTab(tab: Tab) {
+  switch (tab) {
+    case "Expenses":
+      return "/expenses";
+    case "Settlement Plan":
+      return "/settlement-plan";
+    case "Archive":
+      return "/archive";
+    case "Overview":
+    default:
+      return "/dashboard";
+  }
 }

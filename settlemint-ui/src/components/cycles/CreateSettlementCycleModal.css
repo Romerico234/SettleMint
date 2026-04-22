@@ -1,0 +1,111 @@
+.create-cycle-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 10, 8, 0.74);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 60;
+}
+
+.create-cycle-modal {
+  width: min(100%, 540px);
+  border-radius: 28px;
+  border: 1px solid rgba(91, 228, 183, 0.16);
+  background: linear-gradient(180deg, rgba(16, 44, 37, 0.98), rgba(9, 26, 22, 0.98));
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42);
+  padding: 24px;
+}
+
+.create-cycle-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.create-cycle-modal-eyebrow {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.create-cycle-modal-title {
+  margin: 8px 0 0;
+  font-size: 28px;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.create-cycle-modal-copy {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.create-cycle-modal-close {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font: inherit;
+  font-size: 24px;
+}
+
+.create-cycle-modal-body {
+  margin-top: 24px;
+}
+
+.create-cycle-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.create-cycle-modal-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.create-cycle-modal-input {
+  width: 100%;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  padding: 14px 16px;
+  font: inherit;
+}
+
+.create-cycle-modal-input:focus {
+  outline: none;
+  border-color: rgba(91, 228, 183, 0.42);
+  box-shadow: 0 0 0 3px rgba(91, 228, 183, 0.12);
+}
+
+.create-cycle-modal-error {
+  margin: 14px 0 0;
+  color: #ff8f9e;
+  font-size: 14px;
+}
+
+.create-cycle-modal-actions {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.create-cycle-modal-button {
+  width: auto;
+  min-width: 180px;
+}

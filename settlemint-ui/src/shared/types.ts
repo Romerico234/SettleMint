@@ -24,9 +24,11 @@ export type GroupMember = {
 
 export type Cycle = {
   id: string;
+  groupId: string;
   name: string;
   status: CycleStatus;
   createdAt: string;
+  updatedAt: string;
 };
 
 export type Member = {
