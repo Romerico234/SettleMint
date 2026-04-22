@@ -32,27 +32,54 @@ export type Cycle = {
 };
 
 export type Member = {
-  id: string;
-  name: string;
+  walletAddress: string;
+  displayName: string;
+  totalPaid: number;
+  totalOwed: number;
   balance: number;
+};
+
+export type ExpenseSplit = {
+  walletAddress: string;
+  displayName: string;
+  amount: number;
 };
 
 export type Expense = {
   id: string;
+  groupId: string;
+  cycleId: string;
   description: string;
   amount: number;
-  paidBy: string;
+  paidByWallet: string;
+  paidByDisplayName: string;
+  createdByWallet: string;
   createdAt: string;
+  updatedAt: string;
+  splits: ExpenseSplit[];
+  deleteApprovalCount: number;
+  deleteRequiredApprovalCount: number;
+  deleteApprovedByCurrentUser: boolean;
+  deletePending: boolean;
 };
 
 export type SettlementStatus = "Pending" | "Verified";
 
 export type Settlement = {
   id: string;
-  from: string;
-  to: string;
+  fromWalletAddress: string;
+  fromDisplayName: string;
+  toWalletAddress: string;
+  toDisplayName: string;
   amount: number;
   status: SettlementStatus;
+};
+
+export type SettlementSummary = {
+  members: Member[];
+  settlements: Settlement[];
+  totalExpenses: number;
+  expenseCount: number;
 };
 
 export type Badge = {
