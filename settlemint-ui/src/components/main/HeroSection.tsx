@@ -10,6 +10,7 @@ type HeroSectionProps = {
   } | null;
   currentWalletAddress: string | null;
   groupMembers: GroupMember[];
+  hasSelectedCycle: boolean;
   expenseTotal: number;
   pendingCount: number;
   verifiedCount: number;
@@ -38,6 +39,7 @@ export default function HeroSection({
   currentGroup,
   currentWalletAddress,
   groupMembers,
+  hasSelectedCycle,
   expenseTotal,
   pendingCount,
   verifiedCount,
@@ -117,7 +119,11 @@ export default function HeroSection({
       <StatCard
         label="Settlement Cycle Total"
         value={`$${expenseTotal.toFixed(2)}`}
-        caption="No active Settlement Cycle selected"
+        caption={
+          hasSelectedCycle
+            ? "Running total for the selected Settlement Cycle"
+            : "Select a Settlement Cycle to view totals"
+        }
       />
       <StatCard
         label="Pending Settlements"

@@ -31,9 +31,11 @@ export default function OverviewTab({
               Positive means they are owed, negative means they owe.
             </p>
           </div>
-          <button className="ghost-button" type="button" onClick={onRefreshBalances} disabled={!hasSelectedCycle || loading}>
-            Refresh Balances
-          </button>
+          {hasSelectedCycle && (
+            <button className="ghost-button" type="button" onClick={onRefreshBalances} disabled={loading}>
+              Refresh Balances
+            </button>
+          )}
         </div>
         {errorMessage && <p className="section-error">{errorMessage}</p>}
         {loading ? (
@@ -67,9 +69,11 @@ export default function OverviewTab({
             <h3 className="section-card-title">Recent Expenses</h3>
             <p className="section-card-copy">Shared costs inside the active Settlement Cycle.</p>
           </div>
-          <button className="primary-chip" type="button" onClick={onAddExpense} disabled={!canAddExpense}>
-            Add Expense
-          </button>
+          {hasSelectedCycle && (
+            <button className="primary-chip" type="button" onClick={onAddExpense} disabled={!canAddExpense}>
+              Add Expense
+            </button>
+          )}
         </div>
         {loading ? (
           <p className="empty-copy">Loading current cycle expenses...</p>

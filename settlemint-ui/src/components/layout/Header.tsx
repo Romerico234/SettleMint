@@ -10,7 +10,7 @@ type HeaderProps = {
 
 export default function Header({
   actionsDisabled = false,
-  showSettlementCycleAction = true,
+  showSettlementCycleAction = false,
   onCreateGroup,
   onJoinGroup,
   onCreateSettlementPeriod,

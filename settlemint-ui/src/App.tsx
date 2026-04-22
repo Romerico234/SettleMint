@@ -1,4 +1,3 @@
-import { useState } from "react";
 import "./App.css";
 import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
@@ -63,6 +62,9 @@ export default function App() {
     groupMembers: groupDirectory.groups.members,
     walletAddress,
   });
+  const showSettlementCycleAction =
+    groupDirectory.cycles.canCreate &&
+    !groupDirectory.cycles.list.some((cycle) => cycle.status === "Active");
 
   async function handleSignOut() {
     await signOut();
@@ -164,7 +166,7 @@ export default function App() {
         <main className="app-main">
           <Header
             actionsDisabled={!accessToken}
-            showSettlementCycleAction={groupDirectory.cycles.canCreate}
+            showSettlementCycleAction={showSettlementCycleAction}
             onCreateGroup={groupDirectory.dialogs.createGroup.open}
             onJoinGroup={groupDirectory.dialogs.joinGroup.open}
             onCreateSettlementPeriod={groupDirectory.dialogs.createCycle.open}
@@ -174,6 +176,7 @@ export default function App() {
             currentGroup={groupDirectory.groups.current}
             currentWalletAddress={walletAddress}
             groupMembers={groupDirectory.groups.members}
+            hasSelectedCycle={settlementLedger.cycle.hasSelected}
             expenseTotal={settlementLedger.summary.totals.expenseTotal}
             pendingCount={settlementLedger.summary.totals.pendingCount}
             verifiedCount={settlementLedger.summary.totals.verifiedCount}
