@@ -15,6 +15,7 @@ import { useAppRoute } from "./lib/appRoute";
 import { useAccountSession } from "./hooks/useAccountSession";
 import { useGroupDirectory } from "./hooks/useGroupDirectory";
 import { useSettlementLedger } from "./hooks/useSettlementLedger";
+import { useSettlementPayments } from "./hooks/useSettlementPayments";
 
 export default function App() {
   const {
@@ -62,6 +63,10 @@ export default function App() {
     groupMembers: groupDirectory.groups.members,
     walletAddress,
   });
+  const settlementPayments = useSettlementPayments({
+    walletAddress,
+    selectedCycle: groupDirectory.cycles.current,
+  });
   const showSettlementCycleAction =
     groupDirectory.cycles.canCreate &&
     !groupDirectory.cycles.list.some((cycle) => cycle.status === "Active");
@@ -70,6 +75,7 @@ export default function App() {
     await signOut();
     groupDirectory.resetUiState();
     settlementLedger.resetUiState();
+    settlementPayments.resetUiState();
   }
 
   return (
@@ -222,6 +228,15 @@ export default function App() {
               }
               loading={settlementLedger.summary.loading}
               errorMessage={settlementLedger.summary.errorMessage}
+              currentWalletAddress={walletAddress}
+              paymentPendingIDs={settlementPayments.pendingSettlementIDs}
+              paymentErrorMessage={settlementPayments.errorMessage}
+              paymentConfigured={settlementPayments.paymentConfigured}
+              paymentSetupMessage={settlementPayments.paymentSetupMessage}
+              paymentRailLabel={settlementPayments.paymentRailLabel}
+              paymentAssetSymbol={settlementPayments.paymentAssetSymbol}
+              transactionHashesBySettlementID={settlementPayments.transactionHashesBySettlementID}
+              onPaySettlement={(settlement) => void settlementPayments.paySettlement(settlement)}
             />
           )}
 
