@@ -41,21 +41,25 @@ The Hardhat config auto-loads `.env`, so you do not need to re-export variables 
 
 ## Deploy In Development
 
-1. Make sure your deployer wallet has testnet POL on Polygon Amoy.
-2. Build the contracts:
+1. Fund your deployer wallet with testnet POL on Polygon Amoy.
+2. For this project, use the Alchemy Amoy faucet:
+   - [https://www.alchemy.com/faucets/polygon-amoy](https://www.alchemy.com/faucets/polygon-amoy)
+3. Alchemy requires the wallet to have at least `0.001 ETH` on Ethereum Mainnet and enough mainnet activity to qualify.
+4. If your chosen deployer wallet does not meet that requirement, use a wallet that does qualify to claim the faucet funds, then send the Amoy POL to your deployer wallet.
+5. Build the contracts:
 
 ```bash
 pnpm run build
 ```
 
-3. Deploy to Amoy:
+6. Deploy to Amoy:
 
 ```bash
 pnpm run deploy:amoy
 ```
 
-4. After deployment, open `deployments/amoy.json`.
-5. Copy the `mockSettlementToken.address` value into `settlemint-ui/.env` as `VITE_SETTLEMENT_TOKEN_ADDRESS`.
+7. After deployment, open `deployments/amoy.json`.
+8. Copy the `mockSettlementToken.address` value into `settlemint-ui/.env` as `VITE_SETTLEMENT_TOKEN_ADDRESS`.
 
 If the contract code and deployed addresses do not change, you do not need to redeploy every time you run the app.
 
