@@ -34,9 +34,11 @@ export default function ExpensesTab({
                 : "Select a Settlement Cycle to track shared spending."}
             </p>
           </div>
-          <button className="primary-chip" type="button" onClick={onAddExpense} disabled={!canAddExpense}>
-            Add Expense
-          </button>
+          {selectedCycleName && (
+            <button className="primary-chip" type="button" onClick={onAddExpense} disabled={!canAddExpense}>
+              Add Expense
+            </button>
+          )}
         </div>
         {errorMessage && <p className="section-error">{errorMessage}</p>}
         {loading ? (

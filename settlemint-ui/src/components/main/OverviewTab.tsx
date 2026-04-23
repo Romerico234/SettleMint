@@ -1,9 +1,8 @@
-import type { Badge, Expense, Member } from "../../shared/types";
+import type { Expense, Member } from "../../shared/types";
 
 type OverviewTabProps = {
   members: Member[];
   expenses: Expense[];
-  badges: Badge[];
   hasSelectedCycle: boolean;
   loading: boolean;
   errorMessage: string | null;
@@ -15,7 +14,6 @@ type OverviewTabProps = {
 export default function OverviewTab({
   members,
   expenses,
-  badges,
   hasSelectedCycle,
   loading,
   errorMessage,
@@ -33,9 +31,11 @@ export default function OverviewTab({
               Positive means they are owed, negative means they owe.
             </p>
           </div>
-          <button className="ghost-button" type="button" onClick={onRefreshBalances} disabled={!hasSelectedCycle || loading}>
-            Refresh Balances
-          </button>
+          {hasSelectedCycle && (
+            <button className="ghost-button" type="button" onClick={onRefreshBalances} disabled={loading}>
+              Refresh Balances
+            </button>
+          )}
         </div>
         {errorMessage && <p className="section-error">{errorMessage}</p>}
         {loading ? (
@@ -69,9 +69,11 @@ export default function OverviewTab({
             <h3 className="section-card-title">Recent Expenses</h3>
             <p className="section-card-copy">Shared costs inside the active Settlement Cycle.</p>
           </div>
-          <button className="primary-chip" type="button" onClick={onAddExpense} disabled={!canAddExpense}>
-            Add Expense
-          </button>
+          {hasSelectedCycle && (
+            <button className="primary-chip" type="button" onClick={onAddExpense} disabled={!canAddExpense}>
+              Add Expense
+            </button>
+          )}
         </div>
         {loading ? (
           <p className="empty-copy">Loading current cycle expenses...</p>
@@ -93,29 +95,6 @@ export default function OverviewTab({
           </div>
         ) : (
           <p className="empty-copy">No recent expenses.</p>
-        )}
-      </article>
-
-      <article className="dashboard-card section-card section-card-wide">
-        <div className="section-card-header">
-          <div>
-            <h3 className="section-card-title">Badge Progress</h3>
-            <p className="section-card-copy">
-              Optional on-chain achievements for engaged group members.
-            </p>
-          </div>
-        </div>
-        {badges.length > 0 ? (
-          <div className="simple-list">
-            {badges.map((badge) => (
-              <div className="simple-row" key={badge.id}>
-                <span>{badge.name}</span>
-                <span>{badge.description}</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="empty-copy">No badges available.</p>
         )}
       </article>
     </section>

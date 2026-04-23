@@ -123,7 +123,7 @@ export default function CreateGroupModal({
                     Teammates can paste just this code into Join Group.
                   </span>
                   {copiedState === "code" && (
-                    <span className="create-group-modal-copy-badge">Copied</span>
+                    <span className="create-group-modal-copy-state">Copied</span>
                   )}
                 </div>
               </div>

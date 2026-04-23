@@ -81,9 +81,3 @@ export type SettlementSummary = {
   totalExpenses: number;
   expenseCount: number;
 };
-
-export type Badge = {
-  id: string;
-  name: string;
-  description: string;
-};
