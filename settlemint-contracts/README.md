@@ -67,9 +67,7 @@ Bootstrap development wallets with native localhost ETH:
 pnpm run bootstrap:localhost
 ```
 
-Deployment output is written to:
-
-- [`settlemint-contracts/deployments/localhost.json`](/Users/romericodavid/repos/SettleMint/settlemint-contracts/deployments/localhost.json)
+Deployment output is written to:`settlemint-contracts/deployments/localhost.json`.
 
 ## Public-Network Deployment
 

@@ -5,6 +5,7 @@ export type ChainNetworkProfile = {
   key: ChainNetworkKey;
   label: string;
   status: ChainNetworkStatus;
+  priceAssetID: string;
   chainId: number;
   chainName: string;
   nativeCurrency: {
@@ -21,6 +22,7 @@ export const chainNetworkProfiles: Record<ChainNetworkKey, ChainNetworkProfile> 
     key: "localhost",
     label: "Hardhat Localhost",
     status: "active",
+    priceAssetID: "ethereum",
     chainId: 31337,
     chainName: "Hardhat Localhost",
     nativeCurrency: {
@@ -35,6 +37,7 @@ export const chainNetworkProfiles: Record<ChainNetworkKey, ChainNetworkProfile> 
     key: "amoy",
     label: "Polygon Amoy",
     status: "inactive",
+    priceAssetID: "polygon-ecosystem-token",
     chainId: 80002,
     chainName: "Polygon Amoy",
     nativeCurrency: {
@@ -49,6 +52,7 @@ export const chainNetworkProfiles: Record<ChainNetworkKey, ChainNetworkProfile> 
     key: "polygon",
     label: "Polygon PoS",
     status: "inactive",
+    priceAssetID: "polygon-ecosystem-token",
     chainId: 137,
     chainName: "Polygon PoS",
     nativeCurrency: {

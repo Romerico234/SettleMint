@@ -203,6 +203,43 @@ export async function sendTransaction(
   })) as `0x${string}`;
 }
 
+export async function getNativeBalance(provider: EthereumProvider, walletAddress: string) {
+  const balanceHex = (await provider.request({
+    method: "eth_getBalance",
+    params: [walletAddress, "latest"],
+  })) as `0x${string}`;
+
+  return BigInt(balanceHex);
+}
+
+export async function waitForTransactionReceipt(
+  provider: EthereumProvider,
+  transactionHash: `0x${string}`,
+  input: {
+    timeoutMs?: number;
+    pollIntervalMs?: number;
+  } = {},
+) {
+  const timeoutMs = input.timeoutMs ?? 15_000;
+  const pollIntervalMs = input.pollIntervalMs ?? 500;
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    const receipt = (await provider.request({
+      method: "eth_getTransactionReceipt",
+      params: [transactionHash],
+    })) as Record<string, unknown> | null;
+
+    if (receipt) {
+      return receipt;
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, pollIntervalMs));
+  }
+
+  return null;
+}
+
 export function appAmountToBaseUnits(amount: number, decimals: number) {
   if (!Number.isFinite(amount) || amount <= 0) {
     throw new Error("Amount must be greater than zero.");

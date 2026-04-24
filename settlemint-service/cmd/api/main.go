@@ -24,7 +24,6 @@ func main() {
 
 	router := server.NewRouter(application.Config.CORSAllowedOrigin, application.Modules)
 
-	log.Printf("server running on port %s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, router); err != nil {
 		log.Fatalf("server failed: %v", err)
 	}

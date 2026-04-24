@@ -66,6 +66,7 @@ export default function App() {
   const settlementPayments = useSettlementPayments({
     walletAddress,
     selectedCycle: groupDirectory.cycles.current,
+    settlements: settlementLedger.summary.settlements,
   });
   const showSettlementCycleAction =
     groupDirectory.cycles.canCreate &&
@@ -222,21 +223,20 @@ export default function App() {
           {selectedTab === "Settlement Plan" && (
             <SettlementPlanTab
               members={settlementLedger.summary.members}
-              settlements={settlementLedger.summary.settlements}
+              repaymentBlocks={settlementPayments.repaymentBlocks}
               selectedCycleName={
                 settlementLedger.cycle.hasSelected ? groupDirectory.cycles.current?.name ?? null : null
               }
               loading={settlementLedger.summary.loading}
               errorMessage={settlementLedger.summary.errorMessage}
               currentWalletAddress={walletAddress}
-              paymentPendingIDs={settlementPayments.pendingSettlementIDs}
+              paymentPendingIDs={settlementPayments.pendingRepaymentBlockIDs}
               paymentErrorMessage={settlementPayments.errorMessage}
               paymentConfigured={settlementPayments.paymentConfigured}
               paymentSetupMessage={settlementPayments.paymentSetupMessage}
               paymentRailLabel={settlementPayments.paymentRailLabel}
               paymentAssetSymbol={settlementPayments.paymentAssetSymbol}
-              transactionHashesBySettlementID={settlementPayments.transactionHashesBySettlementID}
-              onPaySettlement={(settlement) => void settlementPayments.paySettlement(settlement)}
+              onPaySettlement={(repaymentBlock) => void settlementPayments.paySettlement(repaymentBlock)}
             />
           )}
 

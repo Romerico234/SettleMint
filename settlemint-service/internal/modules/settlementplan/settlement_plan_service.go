@@ -51,12 +51,14 @@ func (s *Service) BuildSummary(
 		return left.Balance > right.Balance
 	})
 
-	return Summary{
+	summary := Summary{
 		Members:       memberBalances,
 		Settlements:   settlements,
 		TotalExpenses: centsToCurrency(totalExpensesCents),
 		ExpenseCount:  len(expenses),
-	}, nil
+	}
+
+	return summary, nil
 }
 
 type memberSnapshot struct {

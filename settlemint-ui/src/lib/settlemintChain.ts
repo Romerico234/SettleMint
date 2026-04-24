@@ -7,6 +7,7 @@ import {
 type SettleMintChainConfig = {
   key: string;
   status: "active" | "inactive";
+  priceAssetID: string;
   chainId: number;
   chainIdHex: `0x${string}`;
   chainName: string;
@@ -27,6 +28,7 @@ const selectedProfile = chainNetworkProfiles[selectedNetworkKey];
 export const settlemintChain: SettleMintChainConfig = {
   key: selectedProfile.key,
   status: selectedProfile.status,
+  priceAssetID: selectedProfile.priceAssetID,
   chainId: selectedProfile.chainId,
   chainIdHex: `0x${selectedProfile.chainId.toString(16)}`,
   chainName: selectedProfile.chainName,

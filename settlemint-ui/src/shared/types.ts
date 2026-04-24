@@ -75,6 +75,33 @@ export type Settlement = {
   status: SettlementStatus;
 };
 
+export type NativePaymentQuote = {
+  nativeAmountDisplay: string;
+  nativeAmountBaseUnits: string;
+  nativeSymbol: string;
+  usdPerNative: number;
+  sourceLabel: string;
+  fetchedAtMs: number;
+};
+
+export type RepaymentBlockStatus = "Pending" | "Submitted" | "Verified";
+
+export type RepaymentBlock = {
+  blockId: string;
+  cycleId: string;
+  pairKey: string;
+  sequence: number;
+  settlementSignature: string;
+  fromWalletAddress: string;
+  fromDisplayName: string;
+  toWalletAddress: string;
+  toDisplayName: string;
+  amount: number;
+  status: RepaymentBlockStatus;
+  transactionHash: string | null;
+  paymentQuote: NativePaymentQuote | null;
+};
+
 export type SettlementSummary = {
   members: Member[];
   settlements: Settlement[];
