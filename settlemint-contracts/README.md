@@ -4,9 +4,7 @@ Smart contract sources, Hardhat configuration, and deployment scripts for Settle
 
 ## Network Configuration
 
-Contract network definitions are maintained in:
-
-- [`settlemint-chain/networks.ts`](/Users/romericodavid/repos/SettleMint/settlemint-chain/networks.ts)
+Contract network definitions are maintained in: [`settlemint-chain/networks.ts`](../settlemint-chain/networks.ts).
 
 The contracts package uses three network keys:
 
@@ -16,9 +14,9 @@ The contracts package uses three network keys:
 
 The primary switch points are:
 
-- [`settlemint-contracts/hardhat.config.ts`](/Users/romericodavid/repos/SettleMint/settlemint-contracts/hardhat.config.ts)
-- [`settlemint-contracts/.env.example`](/Users/romericodavid/repos/SettleMint/settlemint-contracts/.env.example)
-- [`settlemint-chain/networks.ts`](/Users/romericodavid/repos/SettleMint/settlemint-chain/networks.ts)
+- `settlemint-contracts/hardhat.config.ts`
+- `settlemint-contracts/.env.example`
+- `settlemint-chain/networks.ts`
 
 ## Environment Setup
 
@@ -87,6 +85,4 @@ Polygon mainnet:
 pnpm run deploy:polygon
 ```
 
-Additional rollout notes are maintained in:
-
-- [`settlemint-chain/NETWORK_ROLLOUT.md`](/Users/romericodavid/repos/SettleMint/settlemint-chain/NETWORK_ROLLOUT.md)
+Additional rollout notes are maintained in: [`settlemint-chain/NETWORK_ROLLOUT.md`](../settlemint-chain/NETWORK_ROLLOUT.md).
