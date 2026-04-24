@@ -204,10 +204,21 @@ function syncRepaymentBlocks(
   settlements: Settlement[],
 ) {
   const latestBlockByPair = new Map<string, RepaymentBlock>();
+  const closedAmountByPair = new Map<string, number>();
+
   for (const repaymentBlock of currentBlocks) {
     const currentLatestBlock = latestBlockByPair.get(repaymentBlock.pairKey);
     if (!currentLatestBlock || repaymentBlock.sequence > currentLatestBlock.sequence) {
       latestBlockByPair.set(repaymentBlock.pairKey, repaymentBlock);
+    }
+
+    if (repaymentBlock.status !== "Pending") {
+      closedAmountByPair.set(
+        repaymentBlock.pairKey,
+        roundCurrency(
+          (closedAmountByPair.get(repaymentBlock.pairKey) ?? 0) + repaymentBlock.amount,
+        ),
+      );
     }
   }
 
@@ -223,17 +234,34 @@ function syncRepaymentBlocks(
     const pairKey = repaymentPairKey(settlement.fromWalletAddress, settlement.toWalletAddress);
     const signature = settlementSignature(settlement);
     const latestBlock = latestBlockByPair.get(pairKey);
+    const closedAmount = closedAmountByPair.get(pairKey) ?? 0;
+    const remainingAmount = roundCurrency(settlement.amount - closedAmount);
 
     if (!latestBlock) {
-      const firstBlock = createRepaymentBlock(cycleID, settlement, pairKey, 1);
+      if (remainingAmount <= 0) {
+        continue;
+      }
+
+      const firstBlock = createRepaymentBlock(cycleID, settlement, pairKey, 1, remainingAmount);
       nextBlocksByID.set(firstBlock.blockId, firstBlock);
       continue;
     }
 
     if (latestBlock.status === "Pending") {
+      if (remainingAmount <= 0) {
+        continue;
+      }
+
       nextBlocksByID.set(
         latestBlock.blockId,
-        createRepaymentBlock(cycleID, settlement, pairKey, latestBlock.sequence, latestBlock),
+        createRepaymentBlock(
+          cycleID,
+          settlement,
+          pairKey,
+          latestBlock.sequence,
+          remainingAmount,
+          latestBlock,
+        ),
       );
       continue;
     }
@@ -241,12 +269,29 @@ function syncRepaymentBlocks(
     if (latestBlock.settlementSignature === signature) {
       nextBlocksByID.set(
         latestBlock.blockId,
-        createRepaymentBlock(cycleID, settlement, pairKey, latestBlock.sequence, latestBlock),
+        createRepaymentBlock(
+          cycleID,
+          settlement,
+          pairKey,
+          latestBlock.sequence,
+          latestBlock.amount,
+          latestBlock,
+        ),
       );
       continue;
     }
 
-    const nextBlock = createRepaymentBlock(cycleID, settlement, pairKey, latestBlock.sequence + 1);
+    if (remainingAmount <= 0) {
+      continue;
+    }
+
+    const nextBlock = createRepaymentBlock(
+      cycleID,
+      settlement,
+      pairKey,
+      latestBlock.sequence + 1,
+      remainingAmount,
+    );
     nextBlocksByID.set(nextBlock.blockId, nextBlock);
   }
 
@@ -258,6 +303,7 @@ function createRepaymentBlock(
   settlement: Settlement,
   pairKey: string,
   sequence: number,
+  amount: number,
   previousBlock?: RepaymentBlock,
 ): RepaymentBlock {
   return {
@@ -270,11 +316,15 @@ function createRepaymentBlock(
     fromDisplayName: settlement.fromDisplayName,
     toWalletAddress: settlement.toWalletAddress,
     toDisplayName: settlement.toDisplayName,
-    amount: settlement.amount,
+    amount,
     status: previousBlock?.status === "Verified" ? "Verified" : previousBlock?.status ?? "Pending",
     transactionHash: previousBlock?.transactionHash ?? null,
     paymentQuote: previousBlock?.paymentQuote ?? null,
   };
+}
+
+function roundCurrency(amount: number) {
+  return Number(amount.toFixed(2));
 }
 
 function compareRepaymentBlocks(left: RepaymentBlock, right: RepaymentBlock) {
