@@ -203,18 +203,6 @@ export async function sendTransaction(
   })) as `0x${string}`;
 }
 
-export function encodeErc20Transfer(recipientWalletAddress: string, amount: bigint) {
-  if (!isWalletAddress(recipientWalletAddress)) {
-    throw new Error("Recipient wallet address is invalid.");
-  }
-
-  const normalizedWallet = recipientWalletAddress.toLowerCase().replace(/^0x/, "");
-  const paddedWallet = normalizedWallet.padStart(64, "0");
-  const paddedAmount = amount.toString(16).padStart(64, "0");
-
-  return `0xa9059cbb${paddedWallet}${paddedAmount}` as const;
-}
-
 export function appAmountToBaseUnits(amount: number, decimals: number) {
   if (!Number.isFinite(amount) || amount <= 0) {
     throw new Error("Amount must be greater than zero.");
@@ -239,8 +227,4 @@ function isProviderErrorCode(error: unknown, expectedCode: number) {
   }
 
   return Number((error as { code: unknown }).code) === expectedCode;
-}
-
-function isWalletAddress(value: string) {
-  return /^0x[a-fA-F0-9]{40}$/.test(value);
 }

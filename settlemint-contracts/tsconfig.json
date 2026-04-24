@@ -13,6 +13,7 @@
     "./hardhat.config.ts",
     "./scripts",
     "./utils",
-    "./test"
+    "./test",
+    "../settlemint-chain/**/*.ts"
   ]
 }

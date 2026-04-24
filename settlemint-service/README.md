@@ -1,10 +1,10 @@
 # SettleMint Service
 
-This service is the backend API for SettleMint. It is responsible for app coordination, wallet-based authentication, MongoDB persistence, and backend-side integrations such as blockchain verification and IPFS/archive workflows.
+Backend API for SettleMint. The service coordinates wallet-based authentication, MongoDB persistence, expense and cycle workflows, and backend-side integrations such as blockchain verification and IPFS/archive handling.
 
 ## Service Structure
 
-At the top level:
+Top-level directories:
 
 - `cmd` → Executable entrypoints
 - `internal` → Application code
@@ -15,7 +15,7 @@ Inside `internal`:
 - `modules` → Feature modules 
 - `integrations` → Integration clients and types for blockchain and IPFS
 
-The request flow is:
+Request flow:
 
 1. `cmd/api/main.go` loads config and starts the HTTP server
 2. `internal/app/app.go` connects to MongoDB and builds the application modules
@@ -24,7 +24,7 @@ The request flow is:
 
 ## Module Convention
 
-Each feature module should follow this layout:
+Feature module layout:
 
 - `<feature>_types.go`
 - `<feature>_datastore.go`
@@ -38,17 +38,15 @@ Example:
 - `internal/modules/user/user_service.go`
 - `internal/modules/user/user_routehandler.go`
 
-This keeps the backend consistent as more domains are added.
+This module structure keeps feature code consistent across the service.
 
 ## Database
 
 The service uses MongoDB.
 
-Environment Split:
+Environment split:
 - local development: `settlemint_db_dev`
 - production: `settlemint_db_prod`
-
-For development, using local Docker Mongo is enough. You do not need a hosted dev cluster unless your team wants a shared remote environment.
 
 ## Environment Setup
 
@@ -58,7 +56,7 @@ Copy the example file:
 cp settlemint-service/.env.example settlemint-service/.env
 ```
 
-The example file contains the important runtime settings:
+Primary runtime settings:
 
 - `APP_ENV`
 - `PORT`
@@ -67,10 +65,10 @@ The example file contains the important runtime settings:
 - `AUTH_TOKEN_SECRET`
 - `CORS_ALLOWED_ORIGIN`
 
-Development Notes:
+Development notes:
 
-- if you run the backend inside Docker Compose, `MONGODB_URI` should be `mongodb://settlemint-mongo:27017`
-- if you run the backend locally against Docker Mongo, `MONGODB_URI` can be `mongodb://localhost:27017`
+- Docker Compose backend: `MONGODB_URI=mongodb://settlemint-mongo:27017`
+- Local backend against Docker Mongo: `MONGODB_URI=mongodb://localhost:27017`
 
 ## Docker Setup
 
@@ -79,15 +77,15 @@ Development Notes:
 - `settlemint-mongo` → Local MongoDB for development
 - `settlemint-service` → The backend API container
 
-Mongo data is stored in a named Docker volume, so rebuilding the backend does not wipe your local database.
+Mongo data is stored in a named Docker volume, so rebuilding the backend does not wipe the local database.
 
-Your data is normally preserved across:
+Data is normally preserved across:
 
 - `docker compose up --build`
 - `docker compose restart`
 - `docker compose down`
 
-Your data is removed only if you explicitly remove the volume, such as with:
+Data is removed only when the volume is explicitly removed, for example:
 
 ```bash
 docker compose down -v
@@ -103,13 +101,13 @@ From `settlemint-service`:
 docker compose up --build -d
 ```
 
-The API should then be available at:
+The API is available at:
 
 ```text
 http://localhost:8080
 ```
 
-To stop it:
+Stop the stack:
 
 ```bash
 docker compose down
@@ -117,37 +115,33 @@ docker compose down
 
 ### Option 2: Mongo In Docker, Backend Local
 
-This is usually the best developer experience.
-
 Start Mongo only:
 
 ```bash
 docker compose up -d settlemint-mongo
 ```
 
-Then run the backend locally from `settlemint-service`:
+Run the backend locally from `settlemint-service`:
 
 ```bash
 go run ./cmd/api
 ```
 
-If you use this approach, set:
+Use this setting in `.env` for this mode:
 
 ```env
 MONGODB_URI=mongodb://localhost:27017
 ```
 
-in your local `.env`.
-
 ## Build Details
 
-If you want to build without Docker:
+Build without Docker:
 
 ```bash
 go build ./cmd/api
 ```
 
-To run tests:
+Run tests:
 
 ```bash
 go test ./...

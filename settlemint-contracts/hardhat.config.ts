@@ -1,47 +1,49 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import { loadContractsEnv } from "./utils/loadEnv";
+import {
+  type ChainNetworkKey,
+  chainNetworkProfiles,
+} from "../settlemint-chain/networks";
 
 loadContractsEnv();
 
-const deployerPrivateKey = process.env.DEPLOYER_PRIVATE_KEY;
+function getOptionalNetworkConfig(
+  networkKey: Exclude<ChainNetworkKey, "localhost">,
+  rpcEnvKey: "AMOY_RPC_URL" | "POLYGON_RPC_URL",
+) {
+  const rpcUrl = process.env[rpcEnvKey]?.trim();
+  const privateKey = process.env.DEPLOYER_PRIVATE_KEY?.trim();
 
-function buildNetworkConfig(rpcUrl: string | undefined) {
-  if (!rpcUrl || !isValidPrivateKey(deployerPrivateKey)) {
+  if (!rpcUrl || !privateKey) {
     return undefined;
   }
 
   return {
     url: rpcUrl,
-    accounts: [deployerPrivateKey],
+    chainId: chainNetworkProfiles[networkKey].chainId,
+    accounts: [privateKey],
   };
 }
 
-function isValidPrivateKey(value: string | undefined) {
-  if (!value) {
-    return false;
-  }
-
-  const normalizedValue = value.startsWith("0x") ? value.slice(2) : value;
-  return /^[a-fA-F0-9]{64}$/.test(normalizedValue);
-}
-
-const networks = Object.fromEntries(
-  Object.entries({
-    amoy: buildNetworkConfig(process.env.AMOY_RPC_URL),
-    polygon: buildNetworkConfig(process.env.POLYGON_RPC_URL),
-  }).filter(([, config]) => Boolean(config)),
-);
+const amoyNetwork = getOptionalNetworkConfig("amoy", "AMOY_RPC_URL");
+const polygonNetwork = getOptionalNetworkConfig("polygon", "POLYGON_RPC_URL");
 
 const config: HardhatUserConfig = {
   solidity: "0.8.24",
-  networks,
+  networks: {
+    localhost: {
+      url: chainNetworkProfiles.localhost.rpcUrl,
+    },
+    ...(amoyNetwork ? { amoy: amoyNetwork } : {}),
+    ...(polygonNetwork ? { polygon: polygonNetwork } : {}),
+  },
   paths: {
     sources: "./contracts",
     tests: "./test",
     cache: "./cache",
-    artifacts: "./artifacts"
-  }
+    artifacts: "./artifacts",
+  },
 };
 
 export default config;

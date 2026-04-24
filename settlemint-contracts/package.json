@@ -5,9 +5,12 @@
   "scripts": {
     "build": "hardhat compile",
     "clean": "hardhat clean",
+    "node": "hardhat node",
     "test": "hardhat test",
+    "deploy:localhost": "hardhat run scripts/deploy.ts --network localhost",
     "deploy:amoy": "hardhat run scripts/deploy.ts --network amoy",
-    "deploy:polygon": "hardhat run scripts/deploy.ts --network polygon"
+    "deploy:polygon": "hardhat run scripts/deploy.ts --network polygon",
+    "bootstrap:localhost": "hardhat run scripts/bootstrapLocalhost.ts --network localhost"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",

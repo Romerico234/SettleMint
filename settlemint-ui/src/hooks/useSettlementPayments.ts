@@ -4,11 +4,10 @@ import {
   getSettlementPaymentSetupMessage,
   getSettlementRailLabel,
   isSettlementPaymentConfigured,
-  settlementChain,
-} from "../lib/settlementChain";
+  settlemintChain,
+} from "../lib/settlemintChain";
 import {
   appAmountToBaseUnits,
-  encodeErc20Transfer,
   requestWalletAccess,
   sendTransaction,
   switchOrAddChain,
@@ -75,28 +74,18 @@ export function useSettlementPayments({
         throw new Error("The connected wallet does not match the signed-in SettleMint wallet.");
       }
 
-      await switchOrAddChain(connectedWallet, settlementChain);
+      await switchOrAddChain(connectedWallet, settlemintChain);
 
       const settlementAmount = appAmountToBaseUnits(
         settlement.amount,
-        settlementChain.asset.kind === "native"
-          ? settlementChain.nativeCurrency.decimals
-          : settlementChain.asset.decimals,
+        settlemintChain.nativeCurrency.decimals,
       );
 
-      const transactionHash =
-        settlementChain.asset.kind === "native"
-          ? await sendTransaction(connectedWallet, {
-              from: connectedWallet.address,
-              to: settlement.toWalletAddress,
-              value: settlementAmount,
-            })
-          : await sendTransaction(connectedWallet, {
-              from: connectedWallet.address,
-              to: settlementChain.asset.tokenAddress!,
-              value: 0n,
-              data: encodeErc20Transfer(settlement.toWalletAddress, settlementAmount),
-            });
+      const transactionHash = await sendTransaction(connectedWallet, {
+        from: connectedWallet.address,
+        to: settlement.toWalletAddress,
+        value: settlementAmount,
+      });
 
       setTransactionHashesBySettlementID((currentHashes) => ({
         ...currentHashes,
@@ -124,10 +113,7 @@ export function useSettlementPayments({
     paymentConfigured: isSettlementPaymentConfigured(),
     paymentSetupMessage: getSettlementPaymentSetupMessage(),
     paymentRailLabel: getSettlementRailLabel(),
-    paymentAssetSymbol:
-      settlementChain.asset.kind === "native"
-        ? settlementChain.nativeCurrency.symbol
-        : settlementChain.asset.symbol,
+    paymentAssetSymbol: settlemintChain.nativeCurrency.symbol,
     paySettlement,
     resetUiState,
   };

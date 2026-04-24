@@ -1,5 +1,5 @@
 import type { Member, Settlement } from "../../shared/types";
-import { buildSettlementTransactionUrl } from "../../lib/settlementChain";
+import { buildSettlementTransactionUrl } from "../../lib/settlemintChain";
 
 type SettlementPlanTabProps = {
   members: Member[];

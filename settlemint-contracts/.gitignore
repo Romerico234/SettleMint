@@ -6,3 +6,5 @@ typechain-types
 .env
 .env.*
 !.env.example
+deployments/*.json
+!deployments/.gitkeep
