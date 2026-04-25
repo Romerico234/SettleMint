@@ -2,7 +2,6 @@ package user
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"strings"
 
@@ -47,13 +46,6 @@ func (m Module) GetMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf(
-		"user profile ensured: user_id=%s wallet_address=%s display_name=%q",
-		profile.ID,
-		profile.WalletAddress,
-		profile.DisplayName,
-	)
-
 	server.WriteJSON(w, http.StatusOK, ProfileResponse{Profile: profile})
 }
 
@@ -80,13 +72,6 @@ func (m Module) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		server.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	log.Printf(
-		"user profile updated: user_id=%s wallet_address=%s display_name=%q",
-		profile.ID,
-		profile.WalletAddress,
-		profile.DisplayName,
-	)
 
 	server.WriteJSON(w, http.StatusOK, ProfileResponse{Profile: profile})
 }

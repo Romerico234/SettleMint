@@ -63,7 +63,7 @@ export type Expense = {
   deletePending: boolean;
 };
 
-export type SettlementStatus = "Pending" | "Verified";
+export type SettlementStatus = "Pending" | "Submitted" | "Verified";
 
 export type Settlement = {
   id: string;
@@ -75,9 +75,60 @@ export type Settlement = {
   status: SettlementStatus;
 };
 
+export type NativePaymentQuote = {
+  nativeAmountDisplay: string;
+  nativeAmountBaseUnits: string;
+  nativeSymbol: string;
+  usdPerNative: number;
+  sourceLabel: string;
+  fetchedAtMs?: number;
+  fetchedAt?: string;
+};
+
+export type PaymentRecordStatus = "Pending" | "Submitted" | "Verified" | "Rejected";
+
+export type PaymentRecord = {
+  id: string;
+  cycleId: string;
+  payerWallet: string;
+  payerDisplayName: string;
+  payeeWallet: string;
+  payeeDisplayName: string;
+  usdObligationAmount: number;
+  txHash: string;
+  chainNetwork: string;
+  chainId: number;
+  nativeAmountBaseUnits: string;
+  quote?: NativePaymentQuote | null;
+  status: PaymentRecordStatus;
+  verificationMessage?: string;
+  submittedAt: string;
+  verifiedAt?: string;
+};
+
+export type RepaymentBlockStatus = "Pending" | "Submitted" | "Verified" | "Rejected";
+
+export type RepaymentBlock = {
+  blockId: string;
+  cycleId: string;
+  pairKey: string;
+  sequence: number;
+  settlementSignature: string;
+  fromWalletAddress: string;
+  fromDisplayName: string;
+  toWalletAddress: string;
+  toDisplayName: string;
+  amount: number;
+  status: RepaymentBlockStatus;
+  transactionHash: string | null;
+  paymentQuote: NativePaymentQuote | null;
+  verificationMessage?: string;
+};
+
 export type SettlementSummary = {
   members: Member[];
   settlements: Settlement[];
+  payments: PaymentRecord[];
   totalExpenses: number;
   expenseCount: number;
 };

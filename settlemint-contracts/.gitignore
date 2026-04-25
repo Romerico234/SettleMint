@@ -3,3 +3,8 @@ cache
 artifacts
 dist
 typechain-types
+.env
+.env.*
+!.env.example
+deployments/*.json
+!deployments/.gitkeep

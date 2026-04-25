@@ -12,6 +12,8 @@
   "include": [
     "./hardhat.config.ts",
     "./scripts",
-    "./test"
+    "./utils",
+    "./test",
+    "../settlemint-chain/**/*.ts"
   ]
 }

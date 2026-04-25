@@ -7,6 +7,7 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"time"
 
 	"settlemint-service/internal/modules/auth"
 
@@ -21,6 +22,7 @@ type Store struct {
 	cyclesCollection      *mongo.Collection
 	membershipsCollection *mongo.Collection
 	profilesCollection    *mongo.Collection
+	paymentsCollection    *mongo.Collection
 }
 
 func NewDatastore(database *mongo.Database) *Store {
@@ -30,6 +32,7 @@ func NewDatastore(database *mongo.Database) *Store {
 		cyclesCollection:      database.Collection("cycles"),
 		membershipsCollection: database.Collection("group_memberships"),
 		profilesCollection:    database.Collection("user_profiles"),
+		paymentsCollection:    database.Collection("settlement_payments"),
 	}
 }
 
@@ -216,6 +219,98 @@ func (s *Store) loadSplitsByExpenseID(ctx context.Context, expenseIDs []string) 
 	}
 
 	return splitsByExpenseID, nil
+}
+
+func (s *Store) LoadCyclePayments(ctx context.Context, groupID string, cycleID string) ([]PaymentRecord, error) {
+	cursor, err := s.paymentsCollection.Find(
+		ctx,
+		bson.M{"group_id": groupID, "cycle_id": cycleID},
+		options.Find().SetSort(bson.D{{Key: "submitted_at", Value: 1}}),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("find settlement payments: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	payments := make([]PaymentRecord, 0)
+	walletAddresses := make([]string, 0)
+	for cursor.Next(ctx) {
+		var document struct {
+			ID                    string  `bson:"_id"`
+			CycleID               string  `bson:"cycle_id"`
+			PayerWallet           string  `bson:"payer_wallet"`
+			PayeeWallet           string  `bson:"payee_wallet"`
+			USDObligationAmount   float64 `bson:"usd_obligation_amount"`
+			TxHash                string  `bson:"tx_hash"`
+			ChainNetwork          string  `bson:"chain_network"`
+			ChainID               int64   `bson:"chain_id"`
+			NativeAmountBaseUnits string  `bson:"native_amount_base_units"`
+			Quote                 *struct {
+				NativeAmountDisplay   string    `bson:"native_amount_display"`
+				NativeAmountBaseUnits string    `bson:"native_amount_base_units"`
+				NativeSymbol          string    `bson:"native_symbol"`
+				USDPerNative          float64   `bson:"usd_per_native"`
+				SourceLabel           string    `bson:"source_label"`
+				FetchedAt             time.Time `bson:"fetched_at"`
+			} `bson:"quote,omitempty"`
+			Status              string     `bson:"status"`
+			VerificationMessage string     `bson:"verification_message,omitempty"`
+			SubmittedAt         time.Time  `bson:"submitted_at"`
+			VerifiedAt          *time.Time `bson:"verified_at,omitempty"`
+		}
+		if err := cursor.Decode(&document); err != nil {
+			return nil, fmt.Errorf("decode settlement payment: %w", err)
+		}
+
+		var quote *PaymentQuote
+		if document.Quote != nil {
+			quote = &PaymentQuote{
+				NativeAmountDisplay:   document.Quote.NativeAmountDisplay,
+				NativeAmountBaseUnits: document.Quote.NativeAmountBaseUnits,
+				NativeSymbol:          document.Quote.NativeSymbol,
+				USDPerNative:          document.Quote.USDPerNative,
+				SourceLabel:           document.Quote.SourceLabel,
+				FetchedAt:             document.Quote.FetchedAt.Format(time.RFC3339),
+			}
+		}
+
+		verifiedAt := ""
+		if document.VerifiedAt != nil {
+			verifiedAt = document.VerifiedAt.Format(time.RFC3339)
+		}
+
+		payments = append(payments, PaymentRecord{
+			ID:                    document.ID,
+			CycleID:               document.CycleID,
+			PayerWallet:           document.PayerWallet,
+			PayeeWallet:           document.PayeeWallet,
+			USDObligationAmount:   document.USDObligationAmount,
+			TxHash:                document.TxHash,
+			ChainNetwork:          document.ChainNetwork,
+			ChainID:               document.ChainID,
+			NativeAmountBaseUnits: document.NativeAmountBaseUnits,
+			Quote:                 quote,
+			Status:                document.Status,
+			VerificationMessage:   document.VerificationMessage,
+			SubmittedAt:           document.SubmittedAt.Format(time.RFC3339),
+			VerifiedAt:            verifiedAt,
+		})
+		walletAddresses = append(walletAddresses, document.PayerWallet, document.PayeeWallet)
+	}
+	if err := cursor.Err(); err != nil {
+		return nil, fmt.Errorf("iterate settlement payments: %w", err)
+	}
+
+	displayNameByWallet, err := s.loadDisplayNamesByWallet(ctx, walletAddresses)
+	if err != nil {
+		return nil, err
+	}
+	for index := range payments {
+		payments[index].PayerDisplayName = displayNameByWallet[payments[index].PayerWallet]
+		payments[index].PayeeDisplayName = displayNameByWallet[payments[index].PayeeWallet]
+	}
+
+	return payments, nil
 }
 
 func (s *Store) loadDisplayNamesByWallet(ctx context.Context, walletAddresses []string) (map[string]string, error) {

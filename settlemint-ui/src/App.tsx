@@ -15,6 +15,7 @@ import { useAppRoute } from "./lib/appRoute";
 import { useAccountSession } from "./hooks/useAccountSession";
 import { useGroupDirectory } from "./hooks/useGroupDirectory";
 import { useSettlementLedger } from "./hooks/useSettlementLedger";
+import { useSettlementPayments } from "./hooks/useSettlementPayments";
 
 export default function App() {
   const {
@@ -62,6 +63,13 @@ export default function App() {
     groupMembers: groupDirectory.groups.members,
     walletAddress,
   });
+  const settlementPayments = useSettlementPayments({
+    walletAddress,
+    selectedCycle: groupDirectory.cycles.current,
+    settlements: settlementLedger.summary.settlements,
+    payments: settlementLedger.summary.payments,
+    onPaymentStateChanged: settlementLedger.refresh,
+  });
   const showSettlementCycleAction =
     groupDirectory.cycles.canCreate &&
     !groupDirectory.cycles.list.some((cycle) => cycle.status === "Active");
@@ -70,6 +78,7 @@ export default function App() {
     await signOut();
     groupDirectory.resetUiState();
     settlementLedger.resetUiState();
+    settlementPayments.resetUiState();
   }
 
   return (
@@ -216,12 +225,20 @@ export default function App() {
           {selectedTab === "Settlement Plan" && (
             <SettlementPlanTab
               members={settlementLedger.summary.members}
-              settlements={settlementLedger.summary.settlements}
+              repaymentBlocks={settlementPayments.repaymentBlocks}
               selectedCycleName={
                 settlementLedger.cycle.hasSelected ? groupDirectory.cycles.current?.name ?? null : null
               }
               loading={settlementLedger.summary.loading}
               errorMessage={settlementLedger.summary.errorMessage}
+              currentWalletAddress={walletAddress}
+              paymentPendingIDs={settlementPayments.pendingRepaymentBlockIDs}
+              paymentErrorMessage={settlementPayments.errorMessage}
+              paymentConfigured={settlementPayments.paymentConfigured}
+              paymentSetupMessage={settlementPayments.paymentSetupMessage}
+              paymentRailLabel={settlementPayments.paymentRailLabel}
+              paymentAssetSymbol={settlementPayments.paymentAssetSymbol}
+              onPaySettlement={(repaymentBlock) => void settlementPayments.paySettlement(repaymentBlock)}
             />
           )}
 

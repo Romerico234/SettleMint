@@ -296,10 +296,78 @@
   min-width: 0;
 }
 
+.settlement-repayment-list {
+  max-height: min(58vh, 560px);
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.settlement-repayment-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.settlement-repayment-list::-webkit-scrollbar-thumb {
+  background: rgba(142, 240, 200, 0.28);
+  border-radius: 999px;
+}
+
+.settlement-repayment-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+}
+
 .settlement-column-title {
   margin: 0 0 14px;
   font-size: 15px;
   letter-spacing: 0.02em;
+}
+
+.settlement-row-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.settlement-rail-copy {
+  margin-top: 12px;
+}
+
+.settlement-setup-copy {
+  margin-top: 18px;
+}
+
+.settlement-setup-copy-warning {
+  color: #ffd666;
+}
+
+.settlement-status-pill {
+  min-width: 96px;
+  text-align: center;
+}
+
+.settlement-status-pill-submitted {
+  background: rgba(255, 214, 102, 0.12);
+  color: #ffd666;
+}
+
+.settlement-status-pill-verified {
+  background: rgba(83, 214, 174, 0.14);
+  color: var(--accent);
+}
+
+.settlement-transaction-copy {
+  margin-top: 8px;
+}
+
+.settlement-transaction-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.settlement-transaction-link:hover,
+.settlement-transaction-link:focus-visible {
+  text-decoration: underline;
 }
 
 .ghost-button,
