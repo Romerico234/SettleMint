@@ -244,6 +244,7 @@ export default function App() {
               paymentSetupMessage={settlementPayments.paymentSetupMessage}
               paymentRailLabel={settlementPayments.paymentRailLabel}
               paymentAssetSymbol={settlementPayments.paymentAssetSymbol}
+              showCloseCycleButton={groupDirectory.cycles.canClose}
               canCloseCycle={
                 groupDirectory.cycles.canClose &&
                 !settlementLedger.summary.loading &&

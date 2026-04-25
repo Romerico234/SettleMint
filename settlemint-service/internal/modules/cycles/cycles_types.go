@@ -50,13 +50,7 @@ type ArchiveSummary struct {
 	ArchiveProvider      string    `json:"archiveProvider" bson:"archive_provider"`
 	ArchiveMode          string    `json:"archiveMode" bson:"archive_mode"`
 	ArchivePayloadSHA256 string    `json:"archivePayloadSha256" bson:"archive_payload_sha256"`
-	ClosedByWallet       string    `json:"closedByWallet" bson:"closed_by_wallet"`
 	ClosedAt             time.Time `json:"closedAt" bson:"closed_at"`
-	CreatedAt            time.Time `json:"createdAt" bson:"created_at"`
-	ExpenseCount         int       `json:"expenseCount" bson:"expense_count"`
-	PaymentCount         int       `json:"paymentCount" bson:"payment_count"`
-	VerifiedPaymentCount int       `json:"verifiedPaymentCount" bson:"verified_payment_count"`
-	TotalExpenses        float64   `json:"totalExpenses" bson:"total_expenses"`
 }
 
 type ArchiveMember struct {
@@ -103,11 +97,6 @@ type ArchiveCycleSnapshot struct {
 	Members        []ArchiveMember        `json:"members" bson:"members"`
 	Expenses       []ArchiveExpense       `json:"expenses" bson:"expenses"`
 	Summary        settlementplan.Summary `json:"summary" bson:"summary"`
-}
-
-type ArchiveRecord struct {
-	ArchiveSummary `bson:",inline"`
-	Snapshot       ArchiveCycleSnapshot `json:"snapshot" bson:"snapshot"`
 }
 
 type ArchiveResponse struct {

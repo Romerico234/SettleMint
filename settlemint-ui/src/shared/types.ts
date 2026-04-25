@@ -42,13 +42,7 @@ export type CycleArchive = {
   archiveProvider: string;
   archiveMode: string;
   archivePayloadSha256: string;
-  closedByWallet: string;
   closedAt: string;
-  createdAt: string;
-  expenseCount: number;
-  paymentCount: number;
-  verifiedPaymentCount: number;
-  totalExpenses: number;
   archiveHttpUrl: string;
 };
 

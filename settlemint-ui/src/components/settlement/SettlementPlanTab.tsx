@@ -15,6 +15,7 @@ type SettlementPlanTabProps = {
   paymentSetupMessage: string;
   paymentRailLabel: string;
   paymentAssetSymbol: string;
+  showCloseCycleButton: boolean;
   canCloseCycle: boolean;
   closingCycle: boolean;
   onCloseCycle: () => void;
@@ -35,6 +36,7 @@ export default function SettlementPlanTab({
   paymentSetupMessage,
   paymentRailLabel,
   paymentAssetSymbol,
+  showCloseCycleButton,
   canCloseCycle,
   closingCycle,
   onCloseCycle,
@@ -53,15 +55,22 @@ export default function SettlementPlanTab({
             </p>
             <p className="row-copy settlement-rail-copy">Payment Rail: {paymentRailLabel}</p>
           </div>
-          {selectedCycleName && canCloseCycle ? (
-            <button
-              className="btn btn-secondary settlement-close-button"
-              type="button"
-              onClick={onCloseCycle}
-              disabled={closingCycle}
+          {showCloseCycleButton ? (
+            <span
+              className={`settlement-close-button-wrap ${!canCloseCycle ? "is-disabled" : ""}`}
+              title={!canCloseCycle ? "Resolve pending expenses!" : undefined}
             >
-              {closingCycle ? "Closing..." : "Close Cycle"}
-            </button>
+              <button
+                className={`btn btn-secondary settlement-close-button ${
+                  !canCloseCycle ? "is-disabled" : ""
+                }`}
+                type="button"
+                onClick={onCloseCycle}
+                disabled={!canCloseCycle || closingCycle}
+              >
+                {closingCycle ? "Closing..." : "Close Cycle"}
+              </button>
+            </span>
           ) : null}
         </div>
         <p

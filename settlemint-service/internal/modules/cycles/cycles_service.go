@@ -14,13 +14,14 @@ import (
 )
 
 var (
-	ErrGroupNotFound            = errors.New("group not found")
-	ErrGroupMembershipRequired  = errors.New("you are not a member of this group")
-	ErrOnlyOwnerCanCreateCycle  = errors.New("only the group owner can create a settlement cycle")
-	ErrOnlyOwnerCanCloseCycle   = errors.New("only the group owner can close the settlement cycle")
-	ErrCycleNotFound            = errors.New("settlement cycle not found")
-	ErrCycleAlreadyClosed       = errors.New("settlement cycle is already closed")
-	ErrCycleHasOutstandingItems = errors.New("all settlement obligations must be verified before closing the cycle")
+	ErrGroupNotFound               = errors.New("group not found")
+	ErrGroupMembershipRequired     = errors.New("you are not a member of this group")
+	ErrOnlyOwnerCanCreateCycle     = errors.New("only the group owner can create a settlement cycle")
+	ErrOnlyOwnerCanCloseCycle      = errors.New("only the group owner can close the settlement cycle")
+	ErrSettlementCycleLimitReached = errors.New("group can only have 10 settlement cycles")
+	ErrCycleNotFound               = errors.New("settlement cycle not found")
+	ErrCycleAlreadyClosed          = errors.New("settlement cycle is already closed")
+	ErrCycleHasOutstandingItems    = errors.New("all settlement obligations must be verified before closing the cycle")
 )
 
 type settlementPlanner interface {
@@ -96,34 +97,26 @@ func (s *Service) CloseCycle(
 		return ArchiveSummary{}, err
 	}
 
-	archive := ArchiveRecord{
-		ArchiveSummary: ArchiveSummary{
-			ID:                   archiveSeed.ArchiveID,
-			GroupID:              groupID,
-			CycleID:              cycleID,
-			CycleName:            cycle.Name,
-			Status:               StatusArchived,
-			ArchiveCID:           ipfs.PendingArchiveCID(archiveSeed.ArchiveID),
-			ArchiveHTTPURL:       archiveHTTPURL(ipfs.PendingArchiveCID(archiveSeed.ArchiveID)),
-			ArchiveProvider:      "ipfs",
-			ArchiveMode:          "pending",
-			ArchivePayloadSHA256: archivePayloadSHA256,
-			ClosedByWallet:       snapshot.ClosedByWallet,
-			ClosedAt:             archiveSeed.ClosedAt,
-			CreatedAt:            cycle.CreatedAt,
-			ExpenseCount:         len(snapshot.Expenses),
-			PaymentCount:         len(summary.Payments),
-			VerifiedPaymentCount: countVerifiedPayments(summary.Payments),
-			TotalExpenses:        summary.TotalExpenses,
-		},
-		Snapshot: snapshot,
+	archiveCID := ipfs.PendingArchiveCID(archiveSeed.ArchiveID)
+	archive := ArchiveSummary{
+		ID:                   archiveSeed.ArchiveID,
+		GroupID:              groupID,
+		CycleID:              cycleID,
+		CycleName:            cycle.Name,
+		Status:               StatusArchived,
+		ArchiveCID:           archiveCID,
+		ArchiveHTTPURL:       archiveHTTPURL(archiveCID),
+		ArchiveProvider:      "ipfs",
+		ArchiveMode:          "pending",
+		ArchivePayloadSHA256: archivePayloadSHA256,
+		ClosedAt:             archiveSeed.ClosedAt,
 	}
 
 	if err := s.store.ArchiveAndDeleteCycle(ctx, archive); err != nil {
 		return ArchiveSummary{}, err
 	}
 
-	return archive.ArchiveSummary, nil
+	return archive, nil
 }
 
 func cycleCanClose(summary settlementPlan.Summary) bool {
@@ -138,16 +131,6 @@ func cycleCanClose(summary settlementPlan.Summary) bool {
 		}
 	}
 	return true
-}
-
-func countVerifiedPayments(payments []settlementPlan.PaymentRecord) int {
-	total := 0
-	for _, payment := range payments {
-		if payment.Status == "Verified" {
-			total++
-		}
-	}
-	return total
 }
 
 func archivePayloadSHA256(snapshot ArchiveCycleSnapshot) (string, error) {

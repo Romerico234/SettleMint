@@ -39,9 +39,12 @@
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   min-height: 100vh;
+  isolation: isolate;
 }
 
 .app-main {
+  position: relative;
+  z-index: 1;
   padding: 32px;
   display: flex;
   flex-direction: column;
@@ -203,12 +206,35 @@
 
 .settlement-close-button {
   width: auto;
-  min-width: 124px;
-  padding: 10px 14px;
-  font-size: 13px;
+  min-width: 0;
+  padding: 8px 12px;
+  font-size: 12px;
   line-height: 1;
   align-self: flex-start;
   white-space: nowrap;
+  border-radius: 12px;
+}
+
+.settlement-close-button-wrap {
+  align-self: flex-start;
+}
+
+.settlement-close-button-wrap.is-disabled {
+  cursor: not-allowed;
+}
+
+.settlement-close-button.is-disabled,
+.settlement-close-button:disabled {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  opacity: 0.72;
+  box-shadow: none;
+}
+
+.settlement-close-button.is-disabled,
+.settlement-close-button:disabled {
+  pointer-events: none;
 }
 
 .simple-list {

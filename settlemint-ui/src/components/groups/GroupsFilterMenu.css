@@ -1,8 +1,10 @@
 .groups-filter-menu {
   position: absolute;
   top: calc(100% + 10px);
-  left: calc(100% + 10px);
+  left: auto;
+  right: 0;
   width: 208px;
+  max-width: min(208px, calc(100vw - 48px));
   max-height: min(340px, calc(100vh - 72px));
   overflow-y: auto;
   border-radius: 14px;
@@ -15,7 +17,7 @@
 
 .groups-filter-menu-align-end {
   left: auto;
-  right: calc(100% + 10px);
+  right: 0;
 }
 
 .groups-filter-menu-section {
@@ -117,7 +119,6 @@
 
 @media (max-width: 1180px) {
   .groups-filter-menu {
-    left: auto;
     right: 0;
     top: calc(100% + 10px);
   }

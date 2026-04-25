@@ -119,6 +119,14 @@ func (s *Store) CreateCycle(ctx context.Context, authUser auth.User, groupID str
 		return Cycle{}, ErrGroupNotFound
 	}
 
+	totalCycleCount, err := s.countSettlementCycles(ctx, groupID)
+	if err != nil {
+		return Cycle{}, err
+	}
+	if totalCycleCount >= 10 {
+		return Cycle{}, ErrSettlementCycleLimitReached
+	}
+
 	now := time.Now().UTC()
 	cycle := Cycle{
 		ID:              prefixedID("cyc"),
@@ -269,7 +277,7 @@ func (s *Store) LoadArchiveSeed(
 	}, nil
 }
 
-func (s *Store) ArchiveAndDeleteCycle(ctx context.Context, archive ArchiveRecord) error {
+func (s *Store) ArchiveAndDeleteCycle(ctx context.Context, archive ArchiveSummary) error {
 	if _, err := s.cycleArchivesCollection.InsertOne(ctx, archive); err != nil {
 		return fmt.Errorf("insert cycle archive: %w", err)
 	}
@@ -324,6 +332,15 @@ func (s *Store) groupExists(ctx context.Context, groupID string) (bool, error) {
 		return false, fmt.Errorf("count groups: %w", err)
 	}
 	return count > 0, nil
+}
+
+func (s *Store) countSettlementCycles(ctx context.Context, groupID string) (int64, error) {
+	activeCycleCount, err := s.cyclesCollection.CountDocuments(ctx, bson.M{"group_id": groupID})
+	if err != nil {
+		return 0, fmt.Errorf("count settlement cycles: %w", err)
+	}
+
+	return activeCycleCount, nil
 }
 
 func (s *Store) findMembershipRole(ctx context.Context, groupID string, walletAddress string) (string, error) {

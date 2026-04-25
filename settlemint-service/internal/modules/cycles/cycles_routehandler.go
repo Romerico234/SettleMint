@@ -93,6 +93,9 @@ func (m Module) CreateCycle(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, ErrOnlyOwnerCanCreateCycle):
 			server.WriteError(w, http.StatusForbidden, capitalizeError(err.Error()))
 			return
+		case errors.Is(err, ErrSettlementCycleLimitReached):
+			server.WriteError(w, http.StatusConflict, capitalizeError(err.Error()))
+			return
 		}
 		server.WriteError(w, http.StatusInternalServerError, capitalizeError(err.Error()))
 		return

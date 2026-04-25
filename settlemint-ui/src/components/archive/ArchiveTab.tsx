@@ -87,9 +87,6 @@ export default function ArchiveTab({ archivedCycles }: ArchiveTabProps) {
               <div className="simple-row" key={cycle.id}>
                 <div>
                   <strong>{cycle.cycleName}</strong>
-                  <p className="row-copy">
-                    {cycle.expenseCount} expenses • {cycle.verifiedPaymentCount}/{cycle.paymentCount} payments verified
-                  </p>
                   <p className="row-copy">Archive CID: {cycle.archiveCid}</p>
                   <p className="row-copy">
                     <a
@@ -102,7 +99,7 @@ export default function ArchiveTab({ archivedCycles }: ArchiveTabProps) {
                     </a>
                   </p>
                 </div>
-                <span>{formatDisplayDateTime(cycle.closedAt || cycle.createdAt)}</span>
+                <span>{formatDisplayDateTime(cycle.closedAt)}</span>
               </div>
             ))}
           </div>
