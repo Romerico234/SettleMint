@@ -51,7 +51,7 @@ Install frontend dependencies:
 
 ```bash
 cd settlemint-ui
-npm install
+pnpm install
 ```
 
 Install contract dependencies:
@@ -61,7 +61,7 @@ cd settlemint-contracts
 pnpm install
 ```
 
-Prepare the Python helper environment:
+Prepare the Python helper environment for scripts:
 
 ```bash
 cd scripts
@@ -85,32 +85,30 @@ pnpm run deploy:localhost
 pnpm run bootstrap:localhost
 ```
 
-Run MongoDB and the backend service:
+Run MongoDB and the backend service in another terminal:
 
 ```bash
 cd settlemint-service
 docker compose up --build -d
 ```
 
-Seed the local database:
+Seed the local database in another terminal:
 
 ```bash
 cd scripts/populate-dev-db
 python3 populate_dev_db.py
 ```
 
-Run the frontend:
+Run the frontend in another terminal:
 
 ```bash
 cd settlemint-ui
-npm run dev
+pnpm run dev
 ```
 
-The frontend runs at `http://localhost:5173` by default, and the backend API runs at `http://localhost:8080`.
+## Mock Data
 
-## Seeded Groups
-
-The development seed data includes two groups, each with memberships and an empty active settlement cycle so local users can join and experiment immediately.
+The development environment seed data includes two groups, each with memberships and an empty active settlement cycle so local users can join and experiment immediately.
 
 - Towson Tigers: `inv_d71ba3645cbe9203`
 - Guyanaese Tigers: `inv_guyanaese_tigers`
