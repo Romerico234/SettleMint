@@ -233,6 +233,7 @@ func (s *Store) LoadCyclePayments(ctx context.Context, groupID string, cycleID s
 	defer cursor.Close(ctx)
 
 	payments := make([]PaymentRecord, 0)
+	walletAddresses := make([]string, 0)
 	for cursor.Next(ctx) {
 		var document struct {
 			ID                    string  `bson:"_id"`
@@ -294,9 +295,19 @@ func (s *Store) LoadCyclePayments(ctx context.Context, groupID string, cycleID s
 			SubmittedAt:           document.SubmittedAt.Format(time.RFC3339),
 			VerifiedAt:            verifiedAt,
 		})
+		walletAddresses = append(walletAddresses, document.PayerWallet, document.PayeeWallet)
 	}
 	if err := cursor.Err(); err != nil {
 		return nil, fmt.Errorf("iterate settlement payments: %w", err)
+	}
+
+	displayNameByWallet, err := s.loadDisplayNamesByWallet(ctx, walletAddresses)
+	if err != nil {
+		return nil, err
+	}
+	for index := range payments {
+		payments[index].PayerDisplayName = displayNameByWallet[payments[index].PayerWallet]
+		payments[index].PayeeDisplayName = displayNameByWallet[payments[index].PayeeWallet]
 	}
 
 	return payments, nil

@@ -85,7 +85,7 @@ export default function SettlementPlanTab({
             <div className="settlement-column">
               <h4 className="settlement-column-title">Repayment Steps</h4>
               {repaymentBlocks.length > 0 ? (
-                <div className="simple-list">
+                <div className="simple-list settlement-repayment-list">
                   {repaymentBlocks.map((repaymentBlock) => {
                     const transactionHash = repaymentBlock.transactionHash;
                     const paymentQuote = repaymentBlock.paymentQuote;
@@ -191,12 +191,4 @@ function shortWallet(walletAddress: string) {
   }
 
   return `${walletAddress.slice(0, 8)}...${walletAddress.slice(-4)}`;
-}
-
-function shortTransactionHash(transactionHash: string) {
-  if (!transactionHash) {
-    return "Unknown transaction";
-  }
-
-  return `${transactionHash.slice(0, 10)}...${transactionHash.slice(-6)}`;
 }

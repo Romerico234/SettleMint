@@ -91,7 +91,9 @@ export type PaymentRecord = {
   id: string;
   cycleId: string;
   payerWallet: string;
+  payerDisplayName: string;
   payeeWallet: string;
+  payeeDisplayName: string;
   usdObligationAmount: number;
   txHash: string;
   chainNetwork: string;

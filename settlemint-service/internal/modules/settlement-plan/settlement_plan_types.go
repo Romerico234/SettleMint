@@ -31,7 +31,9 @@ type PaymentRecord struct {
 	ID                    string        `json:"id"`
 	CycleID               string        `json:"cycleId"`
 	PayerWallet           string        `json:"payerWallet"`
+	PayerDisplayName      string        `json:"payerDisplayName"`
 	PayeeWallet           string        `json:"payeeWallet"`
+	PayeeDisplayName      string        `json:"payeeDisplayName"`
 	USDObligationAmount   float64       `json:"usdObligationAmount"`
 	TxHash                string        `json:"txHash"`
 	ChainNetwork          string        `json:"chainNetwork"`

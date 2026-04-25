@@ -95,6 +95,27 @@ MEMBERSHIPS = [
     },
 ]
 
+CYCLES = [
+    {
+        "_id": "cyc_towson_empty",
+        "group_id": "grp_2ba4c65dd7bb70e8",
+        "name": "Towson University Expenses",
+        "status": "Active",
+        "created_by_wallet": "0x2797b22bfbb830de49fe9bb639e4a4c13e5579a4",
+        "created_at": utc("2026-04-15T20:34:30.000Z"),
+        "updated_at": utc("2026-04-15T20:34:30.000Z"),
+    },
+    {
+        "_id": "cyc_guyanaese_empty",
+        "group_id": "grp_guyanaese_tigers",
+        "name": "Guyana Trip Expenses",
+        "status": "Active",
+        "created_by_wallet": "0x6508118a40b724af44b6fbab8dbdc3a5da38718b",
+        "created_at": utc("2026-04-15T21:31:00.000Z"),
+        "updated_at": utc("2026-04-15T21:31:00.000Z"),
+    },
+]
+
 def seed_database(mongodb_uri: str, database_name: str) -> None:
     client = MongoClient(mongodb_uri)
     client.drop_database(database_name)
@@ -103,6 +124,7 @@ def seed_database(mongodb_uri: str, database_name: str) -> None:
     user_profiles_collection = database["user_profiles"]
     groups_collection = database["groups"]
     group_memberships_collection = database["group_memberships"]
+    cycles_collection = database["cycles"]
 
     seeded_group_ids = [group["_id"] for group in GROUPS]
     member_counts = Counter(membership["group_id"] for membership in MEMBERSHIPS)
@@ -128,13 +150,20 @@ def seed_database(mongodb_uri: str, database_name: str) -> None:
     if MEMBERSHIPS:
         group_memberships_collection.insert_many(MEMBERSHIPS)
 
+    if CYCLES:
+        cycles_collection.insert_many(CYCLES)
+
     print(f"Upserted {len(USER_PROFILES)} user profiles")
     print(f"Upserted {len(GROUPS)} groups")
     print(f"Inserted {len(MEMBERSHIPS)} group memberships")
+    print(f"Inserted {len(CYCLES)} empty settlement cycles")
     print()
     print("Seeded groups:")
     for group in GROUPS:
-        print(f"- {group['name']} ({member_counts.get(group['_id'], 0)} members)")
+        print(
+            f"- {group['name']} ({member_counts.get(group['_id'], 0)} members), "
+            f"invite code: {group['invite_code']}"
+        )
     print()
     print("Development seed complete.")
 
