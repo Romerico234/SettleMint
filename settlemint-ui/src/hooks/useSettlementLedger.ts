@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { approveExpenseDelete, createCycleExpense, fetchCycleExpenses } from "../api/expenses";
 import { fetchSettlementSummary } from "../api/settlementPlan";
 import { formatErrorMessage } from "../lib/appHelpers";
-import type { Cycle, Expense, Group, GroupMember, Member, Settlement } from "../shared/types";
+import type { Cycle, Expense, Group, GroupMember, Member, PaymentRecord, Settlement } from "../shared/types";
 
 type UseSettlementLedgerInput = {
   accessToken: string | null;
@@ -16,12 +16,14 @@ type LedgerData = {
   members: Member[];
   expenses: Expense[];
   settlements: Settlement[];
+  payments: PaymentRecord[];
 };
 
 const emptyLedger: LedgerData = {
   members: [],
   expenses: [],
   settlements: [],
+  payments: [],
 };
 
 export function useSettlementLedger({
@@ -196,6 +198,7 @@ export function useSettlementLedger({
       members: ledger.members,
       expenses: ledger.expenses,
       settlements: ledger.settlements,
+      payments: ledger.payments,
       totals,
       loading,
       errorMessage,
@@ -257,5 +260,6 @@ async function loadSettlementLedger(groupID: string, cycleID: string) {
     expenses: expensesResult.expenses,
     members: summaryResult.summary.members,
     settlements: summaryResult.summary.settlements,
+    payments: summaryResult.summary.payments ?? [],
   };
 }

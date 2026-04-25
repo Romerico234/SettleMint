@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { submitSettlementPayment } from "../api/settlementPayments";
 import { formatErrorMessage } from "../lib/appHelpers";
 import {
   getSettlementPaymentSetupMessage,
@@ -11,6 +12,7 @@ import {
   formatNativeBaseUnits,
   quoteUsdAmountToNativeBaseUnits,
 } from "../lib/nativeUsdQuote";
+import { buildRecordSettlementPaymentCallData } from "../lib/settlementProof";
 import {
   getNativeBalance,
   requestWalletAccess,
@@ -18,20 +20,22 @@ import {
   switchOrAddChain,
   waitForTransactionReceipt,
 } from "../lib/wallet";
-import type { Cycle, NativePaymentQuote, RepaymentBlock, Settlement } from "../shared/types";
+import type { Cycle, NativePaymentQuote, PaymentRecord, RepaymentBlock, Settlement } from "../shared/types";
 
 type UseSettlementPaymentsInput = {
   walletAddress: string | null;
   selectedCycle: Cycle | null;
   settlements: Settlement[];
+  payments: PaymentRecord[];
+  onPaymentStateChanged?: () => Promise<void> | void;
 };
-
-const repaymentBlocksStorageKeyPrefix = "settlemint:repayment-blocks:";
 
 export function useSettlementPayments({
   walletAddress,
   selectedCycle,
   settlements,
+  payments,
+  onPaymentStateChanged,
 }: UseSettlementPaymentsInput) {
   const [pendingRepaymentBlockIDs, setPendingRepaymentBlockIDs] = useState<string[]>([]);
   const [repaymentBlocks, setRepaymentBlocks] = useState<RepaymentBlock[]>([]);
@@ -46,7 +50,7 @@ export function useSettlementPayments({
     }
 
     setPendingRepaymentBlockIDs([]);
-    setRepaymentBlocks(readStoredRepaymentBlocks(selectedCycle.id));
+    setRepaymentBlocks([]);
     setErrorMessage(null);
   }, [selectedCycle?.id]);
 
@@ -55,23 +59,14 @@ export function useSettlementPayments({
       return;
     }
 
-    setRepaymentBlocks((currentBlocks) =>
-      syncRepaymentBlocks(selectedCycle.id, currentBlocks, settlements),
-    );
-  }, [selectedCycle?.id, settlements]);
-
-  useEffect(() => {
-    if (!selectedCycle?.id) {
-      return;
-    }
-
-    writeStoredRepaymentBlocks(selectedCycle.id, repaymentBlocks);
+    const nextRepaymentBlocks = syncRepaymentBlocks(selectedCycle.id, settlements, payments);
+    setRepaymentBlocks(nextRepaymentBlocks);
     setPendingRepaymentBlockIDs((currentIDs) =>
       currentIDs.filter((currentID) =>
-        repaymentBlocks.some((repaymentBlock) => repaymentBlock.blockId === currentID),
+        nextRepaymentBlocks.some((repaymentBlock) => repaymentBlock.blockId === currentID),
       ),
     );
-  }, [selectedCycle?.id, repaymentBlocks]);
+  }, [selectedCycle?.id, settlements, payments]);
 
   async function paySettlement(repaymentBlock: RepaymentBlock) {
     if (!selectedCycle || selectedCycle.status !== "Active") {
@@ -136,8 +131,13 @@ export function useSettlementPayments({
 
       const transactionHash = await sendTransaction(connectedWallet, {
         from: connectedWallet.address,
-        to: repaymentBlock.toWalletAddress,
+        to: settlemintChain.settlementProofAddress,
         value: settlementAmount,
+        data: await buildRecordSettlementPaymentCallData({
+          cycleId: selectedCycle.id,
+          obligationId: repaymentBlock.settlementSignature,
+          payeeWallet: repaymentBlock.toWalletAddress,
+        }),
       });
 
       const paymentQuote: NativePaymentQuote = {
@@ -147,20 +147,20 @@ export function useSettlementPayments({
         usdPerNative: quote.usdPerNative,
         sourceLabel: quote.sourceLabel,
         fetchedAtMs: quote.fetchedAtMs,
+        fetchedAt: new Date(quote.fetchedAtMs).toISOString(),
       };
 
-      setRepaymentBlocks((currentBlocks) =>
-        currentBlocks.map((currentBlock) =>
-          currentBlock.blockId === repaymentBlock.blockId
-            ? {
-                ...currentBlock,
-                status: "Submitted",
-                transactionHash,
-                paymentQuote,
-              }
-            : currentBlock,
-        ),
-      );
+      await submitSettlementPayment(selectedCycle.groupId, selectedCycle.id, {
+        payerWallet: repaymentBlock.fromWalletAddress,
+        payeeWallet: repaymentBlock.toWalletAddress,
+        usdObligationAmount: repaymentBlock.amount,
+        txHash: transactionHash,
+        chainNetwork: settlemintChain.key,
+        chainId: settlemintChain.chainId,
+        nativeAmountBaseUnits: settlementAmount.toString(),
+        quote: paymentQuote,
+      });
+      await onPaymentStateChanged?.();
 
       void logPaymentDebugAsync({
         repaymentBlock,
@@ -200,102 +200,97 @@ export function useSettlementPayments({
 
 function syncRepaymentBlocks(
   cycleID: string,
-  currentBlocks: RepaymentBlock[],
   settlements: Settlement[],
+  payments: PaymentRecord[],
 ) {
-  const latestBlockByPair = new Map<string, RepaymentBlock>();
   const closedAmountByPair = new Map<string, number>();
+  const sequenceByPair = new Map<string, number>();
+  const nextBlocksByID = new Map<string, RepaymentBlock>();
+  const settlementByPair = new Map<string, Settlement>();
 
-  for (const repaymentBlock of currentBlocks) {
-    const currentLatestBlock = latestBlockByPair.get(repaymentBlock.pairKey);
-    if (!currentLatestBlock || repaymentBlock.sequence > currentLatestBlock.sequence) {
-      latestBlockByPair.set(repaymentBlock.pairKey, repaymentBlock);
-    }
-
-    if (repaymentBlock.status !== "Pending") {
-      closedAmountByPair.set(
-        repaymentBlock.pairKey,
-        roundCurrency(
-          (closedAmountByPair.get(repaymentBlock.pairKey) ?? 0) + repaymentBlock.amount,
-        ),
-      );
-    }
+  for (const settlement of settlements) {
+    settlementByPair.set(
+      repaymentPairKey(settlement.fromWalletAddress, settlement.toWalletAddress),
+      settlement,
+    );
   }
 
-  const nextBlocksByID = new Map<string, RepaymentBlock>();
+  for (const payment of payments) {
+    const pairKey = repaymentPairKey(payment.payerWallet, payment.payeeWallet);
+    const sequence = (sequenceByPair.get(pairKey) ?? 0) + 1;
+    sequenceByPair.set(pairKey, sequence);
 
-  for (const repaymentBlock of currentBlocks) {
-    if (repaymentBlock.status !== "Pending") {
-      nextBlocksByID.set(repaymentBlock.blockId, repaymentBlock);
+    if (payment.status !== "Rejected") {
+      closedAmountByPair.set(
+        pairKey,
+        roundCurrency((closedAmountByPair.get(pairKey) ?? 0) + payment.usdObligationAmount),
+      );
     }
+
+    nextBlocksByID.set(
+      payment.id,
+      createRepaymentBlockFromPayment(
+        cycleID,
+        payment,
+        pairKey,
+        sequence,
+        settlementByPair.get(pairKey),
+      ),
+    );
   }
 
   for (const settlement of settlements) {
     const pairKey = repaymentPairKey(settlement.fromWalletAddress, settlement.toWalletAddress);
-    const signature = settlementSignature(settlement);
-    const latestBlock = latestBlockByPair.get(pairKey);
     const closedAmount = closedAmountByPair.get(pairKey) ?? 0;
     const remainingAmount = roundCurrency(settlement.amount - closedAmount);
-
-    if (!latestBlock) {
-      if (remainingAmount <= 0) {
-        continue;
-      }
-
-      const firstBlock = createRepaymentBlock(cycleID, settlement, pairKey, 1, remainingAmount);
-      nextBlocksByID.set(firstBlock.blockId, firstBlock);
-      continue;
-    }
-
-    if (latestBlock.status === "Pending") {
-      if (remainingAmount <= 0) {
-        continue;
-      }
-
-      nextBlocksByID.set(
-        latestBlock.blockId,
-        createRepaymentBlock(
-          cycleID,
-          settlement,
-          pairKey,
-          latestBlock.sequence,
-          remainingAmount,
-          latestBlock,
-        ),
-      );
-      continue;
-    }
-
-    if (latestBlock.settlementSignature === signature) {
-      nextBlocksByID.set(
-        latestBlock.blockId,
-        createRepaymentBlock(
-          cycleID,
-          settlement,
-          pairKey,
-          latestBlock.sequence,
-          latestBlock.amount,
-          latestBlock,
-        ),
-      );
-      continue;
-    }
 
     if (remainingAmount <= 0) {
       continue;
     }
 
+    const sequence = (sequenceByPair.get(pairKey) ?? 0) + 1;
+    sequenceByPair.set(pairKey, sequence);
     const nextBlock = createRepaymentBlock(
       cycleID,
       settlement,
       pairKey,
-      latestBlock.sequence + 1,
+      sequence,
       remainingAmount,
     );
     nextBlocksByID.set(nextBlock.blockId, nextBlock);
   }
 
   return Array.from(nextBlocksByID.values()).sort(compareRepaymentBlocks);
+}
+
+function createRepaymentBlockFromPayment(
+  cycleID: string,
+  payment: PaymentRecord,
+  pairKey: string,
+  sequence: number,
+  settlement?: Settlement,
+): RepaymentBlock {
+  return {
+    blockId: payment.id,
+    cycleId: cycleID,
+    pairKey,
+    sequence,
+    settlementSignature: [
+      payment.payerWallet.toLowerCase(),
+      payment.payeeWallet.toLowerCase(),
+      payment.usdObligationAmount.toFixed(2),
+      payment.status,
+    ].join("|"),
+    fromWalletAddress: payment.payerWallet,
+    fromDisplayName: settlement?.fromDisplayName ?? "",
+    toWalletAddress: payment.payeeWallet,
+    toDisplayName: settlement?.toDisplayName ?? "",
+    amount: payment.usdObligationAmount,
+    status: payment.status === "Pending" ? "Submitted" : payment.status,
+    transactionHash: payment.txHash,
+    paymentQuote: payment.quote ?? null,
+    verificationMessage: payment.verificationMessage,
+  };
 }
 
 function createRepaymentBlock(
@@ -349,7 +344,10 @@ function repaymentBlockStatusPriority(status: RepaymentBlock["status"]) {
   if (status === "Submitted") {
     return 1;
   }
-  return 2;
+  if (status === "Rejected") {
+    return 2;
+  }
+  return 3;
 }
 
 function repaymentPairKey(fromWalletAddress: string, toWalletAddress: string) {
@@ -363,62 +361,6 @@ function settlementSignature(settlement: Settlement) {
     settlement.amount.toFixed(2),
     settlement.status,
   ].join("|");
-}
-
-function readStoredRepaymentBlocks(cycleID: string) {
-  if (typeof window === "undefined") {
-    return [] as RepaymentBlock[];
-  }
-
-  try {
-    const rawValue = window.localStorage.getItem(repaymentBlocksStorageKey(cycleID));
-    if (!rawValue) {
-      return [] as RepaymentBlock[];
-    }
-
-    const parsedValue = JSON.parse(rawValue) as unknown;
-    if (!Array.isArray(parsedValue)) {
-      return [] as RepaymentBlock[];
-    }
-
-    return parsedValue.filter(isRepaymentBlockLike) as RepaymentBlock[];
-  } catch {
-    return [] as RepaymentBlock[];
-  }
-}
-
-function writeStoredRepaymentBlocks(cycleID: string, repaymentBlocks: RepaymentBlock[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(
-    repaymentBlocksStorageKey(cycleID),
-    JSON.stringify(repaymentBlocks),
-  );
-}
-
-function repaymentBlocksStorageKey(cycleID: string) {
-  return `${repaymentBlocksStorageKeyPrefix}${cycleID}`;
-}
-
-function isRepaymentBlockLike(value: unknown): value is RepaymentBlock {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const candidate = value as Record<string, unknown>;
-  return (
-    typeof candidate.blockId === "string" &&
-    typeof candidate.cycleId === "string" &&
-    typeof candidate.pairKey === "string" &&
-    typeof candidate.sequence === "number" &&
-    typeof candidate.settlementSignature === "string" &&
-    typeof candidate.fromWalletAddress === "string" &&
-    typeof candidate.toWalletAddress === "string" &&
-    typeof candidate.amount === "number" &&
-    typeof candidate.status === "string"
-  );
 }
 
 async function logPaymentDebugAsync(input: {
@@ -440,7 +382,7 @@ async function logPaymentDebugAsync(input: {
     quote: {
       source: input.paymentQuote.sourceLabel,
       usdPerNative: input.paymentQuote.usdPerNative,
-      fetchedAt: new Date(input.paymentQuote.fetchedAtMs).toISOString(),
+      fetchedAt: input.paymentQuote.fetchedAt ?? new Date(input.paymentQuote.fetchedAtMs ?? Date.now()).toISOString(),
     },
     transfer: {
       nativeAmountDisplay: `${input.paymentQuote.nativeAmountDisplay} ${input.paymentQuote.nativeSymbol}`,

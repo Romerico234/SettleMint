@@ -112,14 +112,14 @@ export default function SettlementPlanTab({
                           </strong>
                           <p className="row-copy">
                             {transactionHash
-                              ? "Transaction submitted from wallet"
+                              ? repaymentBlock.verificationMessage || repaymentBlock.status
                               : repaymentBlock.status}
                           </p>
                           <p className="row-copy">
-                            Settlement amount: ${repaymentBlock.amount.toFixed(2)} USD
+                            Settlement Amount: ${repaymentBlock.amount.toFixed(2)} USD
                           </p>
                           <p className="row-copy">
-                            Wallet transfer target:{" "}
+                            Wallet Transfer Amount:{" "}
                             {paymentQuote
                               ? `${paymentQuote.nativeAmountDisplay} ${paymentQuote.nativeSymbol}`
                               : `Quoted in ${paymentAssetSymbol} when Pay Now is opened`}
@@ -134,10 +134,10 @@ export default function SettlementPlanTab({
                                   target="_blank"
                                   rel="noreferrer"
                                 >
-                                  {shortTransactionHash(transactionHash)}
+                                  {transactionHash}
                                 </a>
                               ) : (
-                                shortTransactionHash(transactionHash)
+                                transactionHash
                               )}
                             </p>
                           )}
@@ -154,13 +154,17 @@ export default function SettlementPlanTab({
                             >
                               {isSubmitting ? "Opening Wallet..." : "Pay Now"}
                             </button>
-                          ) : transactionHash ? (
-                            <span className="pill settlement-status-pill settlement-status-pill-submitted">
-                              Submitted
-                            </span>
                           ) : repaymentBlock.status === "Verified" ? (
                             <span className="pill settlement-status-pill settlement-status-pill-verified">
                               Verified
+                            </span>
+                          ) : repaymentBlock.status === "Rejected" ? (
+                            <span className="pill settlement-status-pill settlement-status-pill-submitted">
+                              Rejected
+                            </span>
+                          ) : transactionHash ? (
+                            <span className="pill settlement-status-pill settlement-status-pill-submitted">
+                              Submitted
                             </span>
                           ) : null}
                         </div>

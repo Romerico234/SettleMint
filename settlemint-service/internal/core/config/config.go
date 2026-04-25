@@ -14,12 +14,16 @@ const (
 )
 
 type Config struct {
-	AppEnv            Environment
-	Port              string
-	MongoURI          string
-	MongoDatabase     string
-	AuthTokenSecret   string
-	CORSAllowedOrigin string
+	AppEnv                 Environment
+	Port                   string
+	MongoURI               string
+	MongoDatabase          string
+	AuthTokenSecret        string
+	CORSAllowedOrigin      string
+	SettlementNetwork      string
+	SettlementRPCURL       string
+	SettlementChainID      int64
+	SettlementProofAddress string
 }
 
 func Load() Config {
@@ -36,12 +40,16 @@ func Load() Config {
 	}
 
 	return Config{
-		AppEnv:            appEnv,
-		Port:              port,
-		MongoURI:          loadMongoURI(appEnv),
-		MongoDatabase:     loadMongoDatabase(appEnv),
-		AuthTokenSecret:   loadAuthTokenSecret(appEnv),
-		CORSAllowedOrigin: corsAllowedOrigin,
+		AppEnv:                 appEnv,
+		Port:                   port,
+		MongoURI:               loadMongoURI(appEnv),
+		MongoDatabase:          loadMongoDatabase(appEnv),
+		AuthTokenSecret:        loadAuthTokenSecret(appEnv),
+		CORSAllowedOrigin:      corsAllowedOrigin,
+		SettlementNetwork:      loadSettlementNetwork(),
+		SettlementRPCURL:       loadSettlementRPCURL(),
+		SettlementChainID:      loadSettlementChainID(),
+		SettlementProofAddress: loadSettlementProofAddress(),
 	}
 }
 
@@ -64,6 +72,14 @@ func (c Config) Validate() error {
 
 	if c.AppEnv == EnvironmentProduction && c.CORSAllowedOrigin == "" {
 		return fmt.Errorf("CORS_ALLOWED_ORIGIN is required in production")
+	}
+
+	if c.SettlementChainID <= 0 {
+		return fmt.Errorf("SETTLEMENT_CHAIN_ID must be greater than 0")
+	}
+
+	if c.SettlementProofAddress == "" {
+		return fmt.Errorf("SETTLEMENT_PROOF_ADDRESS is required")
 	}
 
 	return nil
@@ -123,4 +139,45 @@ func loadAuthTokenSecret(appEnv Environment) string {
 	}
 
 	return ""
+}
+
+func loadSettlementNetwork() string {
+	value := strings.TrimSpace(os.Getenv("SETTLEMENT_NETWORK"))
+	if value != "" {
+		return value
+	}
+
+	return "localhost"
+}
+
+func loadSettlementRPCURL() string {
+	value := strings.TrimSpace(os.Getenv("SETTLEMENT_RPC_URL"))
+	if value != "" {
+		return value
+	}
+
+	return "http://127.0.0.1:8545"
+}
+
+func loadSettlementChainID() int64 {
+	value := strings.TrimSpace(os.Getenv("SETTLEMENT_CHAIN_ID"))
+	if value == "" {
+		return 31337
+	}
+
+	var chainID int64
+	if _, err := fmt.Sscanf(value, "%d", &chainID); err != nil {
+		return 0
+	}
+
+	return chainID
+}
+
+func loadSettlementProofAddress() string {
+	value := strings.TrimSpace(os.Getenv("SETTLEMENT_PROOF_ADDRESS"))
+	if value != "" {
+		return strings.ToLower(value)
+	}
+
+	return "0x5fbdb2315678afecb367f032d93f642f64180aa3"
 }

@@ -130,5 +130,28 @@ func EnsureCollections(ctx context.Context, database *mongo.Database) error {
 		return fmt.Errorf("create cycles indexes: %w", err)
 	}
 
+	settlementPayments := database.Collection("settlement_payments")
+
+	_, err = settlementPayments.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{
+			Keys: bson.D{
+				{Key: "group_id", Value: 1},
+				{Key: "cycle_id", Value: 1},
+				{Key: "submitted_at", Value: 1},
+			},
+			Options: options.Index().SetName("settlement_payments_cycle_submitted_idx"),
+		},
+		{
+			Keys: bson.D{
+				{Key: "chain_network", Value: 1},
+				{Key: "tx_hash", Value: 1},
+			},
+			Options: options.Index().SetName("settlement_payments_chain_tx_unique_idx").SetUnique(true),
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("create settlement_payments indexes: %w", err)
+	}
+
 	return nil
 }

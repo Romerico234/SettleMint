@@ -18,12 +18,14 @@ type SettleMintChainConfig = {
   };
   rpcUrls: string[];
   blockExplorerUrls: string[];
+  settlementProofAddress: string;
 };
 
 const selectedNetworkKey = resolveChainNetworkKey(
   import.meta.env.VITE_SETTLEMENT_NETWORK || defaultChainNetworkKey,
 );
 const selectedProfile = chainNetworkProfiles[selectedNetworkKey];
+const defaultLocalhostSettlementProofAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
 export const settlemintChain: SettleMintChainConfig = {
   key: selectedProfile.key,
@@ -35,6 +37,9 @@ export const settlemintChain: SettleMintChainConfig = {
   nativeCurrency: selectedProfile.nativeCurrency,
   rpcUrls: selectedProfile.rpcUrl ? [selectedProfile.rpcUrl] : [],
   blockExplorerUrls: selectedProfile.explorerUrl ? [selectedProfile.explorerUrl] : [],
+  settlementProofAddress:
+    import.meta.env.VITE_SETTLEMENT_PROOF_ADDRESS?.trim() ||
+    (selectedNetworkKey === "localhost" ? defaultLocalhostSettlementProofAddress : ""),
 };
 
 export function buildSettlementTransactionUrl(transactionHash: string) {
@@ -47,7 +52,7 @@ export function buildSettlementTransactionUrl(transactionHash: string) {
 }
 
 export function isSettlementPaymentConfigured() {
-  return settlemintChain.status === "active";
+  return settlemintChain.status === "active" && Boolean(settlemintChain.settlementProofAddress);
 }
 
 export function getSettlementRailLabel() {
@@ -58,6 +63,9 @@ export function getSettlementPaymentSetupMessage() {
   if (settlemintChain.status !== "active") {
     return `The ${settlemintChain.chainName} profile is currently inactive in this branch. See settlemint-chain/NETWORK_ROLLOUT.md before using it.`;
   }
+  if (!settlemintChain.settlementProofAddress) {
+    return `Set VITE_SETTLEMENT_PROOF_ADDRESS to the deployed SettlementProof contract address before using wallet payments.`;
+  }
 
-  return `Wallet payments will use ${settlemintChain.nativeCurrency.symbol} on ${settlemintChain.chainName}.`;
+  return `Wallet payments will use ${settlemintChain.nativeCurrency.symbol} on ${settlemintChain.chainName} through SettlementProof.`;
 }

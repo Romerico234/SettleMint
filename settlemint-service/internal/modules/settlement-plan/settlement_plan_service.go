@@ -41,6 +41,12 @@ func (s *Service) BuildSummary(
 
 	memberBalances, totalExpensesCents := calculateBalances(members, expenses, splitsByExpenseID)
 	settlements := buildSettlementPlan(memberBalances)
+	payments, err := s.store.LoadCyclePayments(ctx, strings.TrimSpace(groupID), strings.TrimSpace(cycleID))
+	if err != nil {
+		return Summary{}, err
+	}
+	memberBalances = applyPaymentsToMemberBalances(memberBalances, payments)
+	settlements = applyPaymentStatus(settlements, payments)
 
 	sort.Slice(memberBalances, func(leftIndex int, rightIndex int) bool {
 		left := memberBalances[leftIndex]
@@ -54,6 +60,7 @@ func (s *Service) BuildSummary(
 	summary := Summary{
 		Members:       memberBalances,
 		Settlements:   settlements,
+		Payments:      payments,
 		TotalExpenses: centsToCurrency(totalExpensesCents),
 		ExpenseCount:  len(expenses),
 	}
@@ -197,4 +204,78 @@ func buildSettlementPlan(balances []MemberBalance) []Settlement {
 
 func settlementID(value int) string {
 	return fmt.Sprintf("stl_%02d", value)
+}
+
+func applyPaymentStatus(settlements []Settlement, payments []PaymentRecord) []Settlement {
+	verifiedCentsByPair := make(map[string]int64)
+	submittedCentsByPair := make(map[string]int64)
+
+	for _, payment := range payments {
+		if payment.Status == "Rejected" {
+			continue
+		}
+
+		pairKey := paymentPairKey(payment.PayerWallet, payment.PayeeWallet)
+		amountCents := currencyToCents(payment.USDObligationAmount)
+		submittedCentsByPair[pairKey] += amountCents
+		if payment.Status == "Verified" {
+			verifiedCentsByPair[pairKey] += amountCents
+		}
+	}
+
+	nextSettlements := make([]Settlement, 0, len(settlements))
+	for _, settlement := range settlements {
+		pairKey := paymentPairKey(settlement.FromWalletAddress, settlement.ToWalletAddress)
+		amountCents := currencyToCents(settlement.Amount)
+		switch {
+		case verifiedCentsByPair[pairKey] >= amountCents:
+			settlement.Status = "Verified"
+		case submittedCentsByPair[pairKey] >= amountCents:
+			settlement.Status = "Submitted"
+		default:
+			settlement.Status = "Pending"
+		}
+		nextSettlements = append(nextSettlements, settlement)
+	}
+
+	return nextSettlements
+}
+
+func paymentPairKey(payerWallet string, payeeWallet string) string {
+	return strings.ToLower(payerWallet) + "->" + strings.ToLower(payeeWallet)
+}
+
+func applyPaymentsToMemberBalances(memberBalances []MemberBalance, payments []PaymentRecord) []MemberBalance {
+	paidCentsByWallet := make(map[string]int64)
+	receivedCentsByWallet := make(map[string]int64)
+
+	for _, payment := range payments {
+		if payment.Status == "Rejected" {
+			continue
+		}
+
+		amountCents := currencyToCents(payment.USDObligationAmount)
+		paidCentsByWallet[strings.ToLower(payment.PayerWallet)] += amountCents
+		receivedCentsByWallet[strings.ToLower(payment.PayeeWallet)] += amountCents
+	}
+
+	adjustedBalances := make([]MemberBalance, 0, len(memberBalances))
+	for _, memberBalance := range memberBalances {
+		walletAddress := strings.ToLower(memberBalance.WalletAddress)
+		paidCents := paidCentsByWallet[walletAddress]
+		receivedCents := receivedCentsByWallet[walletAddress]
+		totalPaidCents := currencyToCents(memberBalance.TotalPaid) + paidCents
+		totalOwedCents := currencyToCents(memberBalance.TotalOwed) - paidCents
+		if totalOwedCents < 0 {
+			totalOwedCents = 0
+		}
+		balanceCents := currencyToCents(memberBalance.Balance) + paidCents - receivedCents
+
+		memberBalance.TotalPaid = centsToCurrency(totalPaidCents)
+		memberBalance.TotalOwed = centsToCurrency(totalOwedCents)
+		memberBalance.Balance = centsToCurrency(balanceCents)
+		adjustedBalances = append(adjustedBalances, memberBalance)
+	}
+
+	return adjustedBalances
 }

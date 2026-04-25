@@ -67,6 +67,8 @@ export default function App() {
     walletAddress,
     selectedCycle: groupDirectory.cycles.current,
     settlements: settlementLedger.summary.settlements,
+    payments: settlementLedger.summary.payments,
+    onPaymentStateChanged: settlementLedger.refresh,
   });
   const showSettlementCycleAction =
     groupDirectory.cycles.canCreate &&

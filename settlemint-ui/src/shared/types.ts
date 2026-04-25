@@ -63,7 +63,7 @@ export type Expense = {
   deletePending: boolean;
 };
 
-export type SettlementStatus = "Pending" | "Verified";
+export type SettlementStatus = "Pending" | "Submitted" | "Verified";
 
 export type Settlement = {
   id: string;
@@ -81,10 +81,30 @@ export type NativePaymentQuote = {
   nativeSymbol: string;
   usdPerNative: number;
   sourceLabel: string;
-  fetchedAtMs: number;
+  fetchedAtMs?: number;
+  fetchedAt?: string;
 };
 
-export type RepaymentBlockStatus = "Pending" | "Submitted" | "Verified";
+export type PaymentRecordStatus = "Pending" | "Submitted" | "Verified" | "Rejected";
+
+export type PaymentRecord = {
+  id: string;
+  cycleId: string;
+  payerWallet: string;
+  payeeWallet: string;
+  usdObligationAmount: number;
+  txHash: string;
+  chainNetwork: string;
+  chainId: number;
+  nativeAmountBaseUnits: string;
+  quote?: NativePaymentQuote | null;
+  status: PaymentRecordStatus;
+  verificationMessage?: string;
+  submittedAt: string;
+  verifiedAt?: string;
+};
+
+export type RepaymentBlockStatus = "Pending" | "Submitted" | "Verified" | "Rejected";
 
 export type RepaymentBlock = {
   blockId: string;
@@ -100,11 +120,13 @@ export type RepaymentBlock = {
   status: RepaymentBlockStatus;
   transactionHash: string | null;
   paymentQuote: NativePaymentQuote | null;
+  verificationMessage?: string;
 };
 
 export type SettlementSummary = {
   members: Member[];
   settlements: Settlement[];
+  payments: PaymentRecord[];
   totalExpenses: number;
   expenseCount: number;
 };
