@@ -67,5 +67,5 @@ export function getSettlementPaymentSetupMessage() {
     return `Set VITE_SETTLEMENT_PROOF_ADDRESS to the deployed SettlementProof contract address before using wallet payments.`;
   }
 
-  return `Wallet payments will use ${settlemintChain.nativeCurrency.symbol} on ${settlemintChain.chainName} through SettlementProof.`;
+  return `Wallet payments will use ${settlemintChain.nativeCurrency.symbol} on ${settlemintChain.chainName}.`;
 }

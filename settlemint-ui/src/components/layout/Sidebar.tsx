@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import type { Cycle, Group, GroupFilterMode, GroupSortMode, Tab } from "../../shared/types";
+import type {
+  Cycle,
+  Group,
+  GroupFilterMode,
+  GroupSortMode,
+  Tab,
+} from "../../shared/types";
 import type { UserProfile } from "../../api/users";
 import filterOnIcon from "../../assets/filter-on.png";
 import filterOffIcon from "../../assets/filter-off.png";

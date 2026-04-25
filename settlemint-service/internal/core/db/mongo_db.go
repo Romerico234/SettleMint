@@ -153,5 +153,31 @@ func EnsureCollections(ctx context.Context, database *mongo.Database) error {
 		return fmt.Errorf("create settlement_payments indexes: %w", err)
 	}
 
+	cycleArchives := database.Collection("cycle_archives")
+
+	_, err = cycleArchives.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{
+			Keys: bson.D{
+				{Key: "group_id", Value: 1},
+				{Key: "closed_at", Value: -1},
+			},
+			Options: options.Index().SetName("cycle_archives_group_closed_idx"),
+		},
+		{
+			Keys: bson.D{
+				{Key: "group_id", Value: 1},
+				{Key: "cycle_id", Value: 1},
+			},
+			Options: options.Index().SetName("cycle_archives_group_cycle_unique_idx").SetUnique(true),
+		},
+		{
+			Keys:    bson.D{{Key: "archive_cid", Value: 1}},
+			Options: options.Index().SetName("cycle_archives_archive_cid_idx"),
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("create cycle_archives indexes: %w", err)
+	}
+
 	return nil
 }

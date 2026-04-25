@@ -1,6 +1,6 @@
 .groups-filter-menu {
   position: absolute;
-  top: -6px;
+  top: calc(100% + 10px);
   left: calc(100% + 10px);
   width: 208px;
   max-height: min(340px, calc(100vh - 72px));
@@ -10,7 +10,12 @@
   background: linear-gradient(180deg, rgba(17, 47, 40, 0.98), rgba(9, 24, 20, 0.98));
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
   padding: 10px;
-  z-index: 15;
+  z-index: 60;
+}
+
+.groups-filter-menu-align-end {
+  left: auto;
+  right: calc(100% + 10px);
 }
 
 .groups-filter-menu-section {
@@ -115,5 +120,9 @@
     left: auto;
     right: 0;
     top: calc(100% + 10px);
+  }
+
+  .groups-filter-menu-align-end {
+    right: 0;
   }
 }

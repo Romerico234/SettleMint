@@ -70,9 +70,14 @@ export default function App() {
     payments: settlementLedger.summary.payments,
     onPaymentStateChanged: settlementLedger.refresh,
   });
-  const showSettlementCycleAction =
-    groupDirectory.cycles.canCreate &&
-    !groupDirectory.cycles.list.some((cycle) => cycle.status === "Active");
+  const showSettlementCycleAction = groupDirectory.cycles.canCreate;
+
+  async function handleCloseCycle() {
+    const archive = await groupDirectory.cycles.close();
+    if (archive) {
+      setSelectedTab("Archive");
+    }
+  }
 
   async function handleSignOut() {
     await signOut();
@@ -231,6 +236,7 @@ export default function App() {
               }
               loading={settlementLedger.summary.loading}
               errorMessage={settlementLedger.summary.errorMessage}
+              cycleActionErrorMessage={groupDirectory.cycles.actionErrorMessage}
               currentWalletAddress={walletAddress}
               paymentPendingIDs={settlementPayments.pendingRepaymentBlockIDs}
               paymentErrorMessage={settlementPayments.errorMessage}
@@ -238,6 +244,18 @@ export default function App() {
               paymentSetupMessage={settlementPayments.paymentSetupMessage}
               paymentRailLabel={settlementPayments.paymentRailLabel}
               paymentAssetSymbol={settlementPayments.paymentAssetSymbol}
+              canCloseCycle={
+                groupDirectory.cycles.canClose &&
+                !settlementLedger.summary.loading &&
+                settlementLedger.summary.settlements.every(
+                  (settlement) => settlement.status === "Verified",
+                ) &&
+                settlementLedger.summary.payments.every(
+                  (payment) => payment.status === "Verified" || payment.status === "Rejected",
+                )
+              }
+              closingCycle={groupDirectory.cycles.closing}
+              onCloseCycle={() => void handleCloseCycle()}
               onPaySettlement={(repaymentBlock) => void settlementPayments.paySettlement(repaymentBlock)}
             />
           )}
