@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchGroupCycles } from "../api/cycles";
+import { closeSettlementCycle, fetchGroupCycleArchives, fetchGroupCycles } from "../api/cycles";
 import { fetchGroupMembers, fetchMyGroups } from "../api/groups";
 import { useCreateCycleDialog } from "./useCreateCycleDialog";
 import { useCreateGroupDialog } from "./useCreateGroupDialog";
 import { useGroupActionDialog } from "./useGroupActionDialog";
 import { useJoinGroupDialog } from "./useJoinGroupDialog";
+import { formatErrorMessage } from "../lib/appHelpers";
 import type {
   Cycle,
+  CycleArchive,
   Group,
   GroupFilterMode,
   GroupMember,
@@ -42,7 +44,10 @@ export function useGroupDirectory({
   const [currentGroup, setCurrentGroup] = useState<Group | null>(null);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [settlementCycles, setSettlementCycles] = useState<Cycle[]>([]);
+  const [archivedCycles, setArchivedCycles] = useState<CycleArchive[]>([]);
   const [currentCycle, setCurrentCycle] = useState<Cycle | null>(null);
+  const [cycleClosing, setCycleClosing] = useState(false);
+  const [cycleActionErrorMessage, setCycleActionErrorMessage] = useState<string | null>(null);
 
   const visibleGroups = useMemo(() => {
     const nextGroups = groups.filter((group) => {
@@ -66,15 +71,13 @@ export function useGroupDirectory({
     });
   }, [groups, filterMode, sortMode]);
 
-  const archivedCycles = useMemo(
-    () => settlementCycles.filter((cycle) => cycle.status === "Archived"),
-    [settlementCycles],
-  );
-
   const canCreateCycle =
     Boolean(accessToken && currentGroup && walletAddress) &&
     (currentGroup?.currentUserRole === "owner" ||
       currentGroup?.ownerWallet.toLowerCase() === walletAddress?.toLowerCase());
+  const canCloseCycle =
+    canCreateCycle &&
+    Boolean(currentGroup && currentCycle && currentCycle.status === "Active");
 
   function selectGroup(group: Group) {
     setCurrentGroup(group);
@@ -84,6 +87,7 @@ export function useGroupDirectory({
   function selectCycle(cycle: Cycle) {
     setCurrentCycle(cycle);
     setRequestedCycleID(cycle.id);
+    setCycleActionErrorMessage(null);
   }
 
   function upsertGroup(nextGroup: Group) {
@@ -105,6 +109,17 @@ export function useGroupDirectory({
   function upsertCycle(nextCycle: Cycle) {
     setSettlementCycles((currentCycles) => upsertByID(currentCycles, nextCycle));
     selectCycle(nextCycle);
+  }
+
+  function removeCycle(cycleID: string) {
+    setSettlementCycles((currentCycles) => {
+      const nextCycles = currentCycles.filter((cycle) => cycle.id !== cycleID);
+      setCurrentCycle((selectedCycle) =>
+        selectedCycle?.id === cycleID ? nextCycles[0] ?? null : selectedCycle,
+      );
+      return nextCycles;
+    });
+    setRequestedCycleID("");
   }
 
   const createGroupDialog = useCreateGroupDialog({
@@ -135,6 +150,7 @@ export function useGroupDirectory({
       setCurrentGroup(null);
       setGroupMembers([]);
       setSettlementCycles([]);
+      setArchivedCycles([]);
       setCurrentCycle(null);
       return;
     }
@@ -169,21 +185,23 @@ export function useGroupDirectory({
   useEffect(() => {
     if (!accessToken || !currentGroup) {
       setSettlementCycles([]);
+      setArchivedCycles([]);
       setCurrentCycle(null);
       return;
     }
 
     let mounted = true;
 
-    fetchGroupCycles(currentGroup.id)
-      .then((result) => {
+    Promise.all([fetchGroupCycles(currentGroup.id), fetchGroupCycleArchives(currentGroup.id)])
+      .then(([cyclesResult, archivesResult]) => {
         if (!mounted) {
           return;
         }
 
-        setSettlementCycles(result.cycles);
+        setSettlementCycles(cyclesResult.cycles);
+        setArchivedCycles(archivesResult.archives);
         setCurrentCycle((selectedCycle) =>
-          resolveSelection(result.cycles, selectedCycle, requestedCycleID),
+          resolveSelection(cyclesResult.cycles, selectedCycle, requestedCycleID),
         );
       })
       .catch(() => {
@@ -192,6 +210,7 @@ export function useGroupDirectory({
         }
 
         setSettlementCycles([]);
+        setArchivedCycles([]);
         setCurrentCycle(null);
       });
 
@@ -245,6 +264,29 @@ export function useGroupDirectory({
     joinGroupDialog.reset();
     groupActionDialog.reset();
     createCycleDialog.reset();
+    setCycleActionErrorMessage(null);
+    setCycleClosing(false);
+  }
+
+  async function closeCurrentCycle() {
+    if (!currentGroup || !currentCycle) {
+      return null;
+    }
+
+    setCycleClosing(true);
+    setCycleActionErrorMessage(null);
+
+    try {
+      const result = await closeSettlementCycle(currentGroup.id, currentCycle.id);
+      setArchivedCycles((currentArchives) => upsertByID(currentArchives, result.archive));
+      removeCycle(currentCycle.id);
+      return result.archive;
+    } catch (error) {
+      setCycleActionErrorMessage(formatErrorMessage(error, "Failed to close settlement cycle"));
+      return null;
+    } finally {
+      setCycleClosing(false);
+    }
   }
 
   return {
@@ -266,6 +308,10 @@ export function useGroupDirectory({
       archived: archivedCycles,
       select: selectCycle,
       canCreate: canCreateCycle,
+      canClose: canCloseCycle,
+      close: closeCurrentCycle,
+      closing: cycleClosing,
+      actionErrorMessage: cycleActionErrorMessage,
     },
     dialogs: {
       createGroup: createGroupDialog,

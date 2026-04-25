@@ -15,6 +15,7 @@ export type Group = {
 
 export type GroupFilterMode = "all" | "owned" | "member";
 export type GroupSortMode = "date" | "name";
+export type ArchiveSortMode = "date" | "name";
 
 export type GroupMember = {
   walletAddress: string;
@@ -29,6 +30,20 @@ export type Cycle = {
   status: CycleStatus;
   createdAt: string;
   updatedAt: string;
+};
+
+export type CycleArchive = {
+  id: string;
+  groupId: string;
+  cycleId: string;
+  cycleName: string;
+  status: CycleStatus;
+  archiveCid: string;
+  archiveProvider: string;
+  archiveMode: string;
+  archivePayloadSha256: string;
+  closedAt: string;
+  archiveHttpUrl: string;
 };
 
 export type Member = {

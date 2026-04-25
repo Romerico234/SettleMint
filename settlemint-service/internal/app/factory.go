@@ -7,8 +7,8 @@ import (
 	"settlemint-service/internal/modules/cycles"
 	"settlemint-service/internal/modules/expenses"
 	"settlemint-service/internal/modules/groups"
-	"settlemint-service/internal/modules/settlement-payments"
-	"settlemint-service/internal/modules/settlement-plan"
+	settlementPayments "settlemint-service/internal/modules/settlement-payments"
+	settlementPlan "settlemint-service/internal/modules/settlement-plan"
 	"settlemint-service/internal/modules/user"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -32,22 +32,22 @@ func (f Factory) BuildModules() (auth.TokenVerifier, []server.RouteModule) {
 	groupDatastore := groups.NewDatastore(f.db)
 	cycleDatastore := cycles.NewDatastore(f.db)
 	expenseDatastore := expenses.NewDatastore(f.db)
-	settlementPlanDatastore := settlementplan.NewDatastore(f.db)
-	settlementPlanService := settlementplan.NewService(settlementPlanDatastore)
-	settlementPaymentDatastore := settlementpayments.NewDatastore(f.db)
+	settlementPlanDatastore := settlementPlan.NewDatastore(f.db)
+	settlementPlanService := settlementPlan.NewService(settlementPlanDatastore)
+	settlementPaymentDatastore := settlementPayments.NewDatastore(f.db)
 
 	return authVerifier, []server.RouteModule{
 		auth.NewModule(authVerifier),
-		cycles.NewModule(cycleDatastore, authVerifier),
+		cycles.NewModule(cycleDatastore, settlementPlanService, authVerifier),
 		expenses.NewModule(expenseDatastore, authVerifier),
 		groups.NewModule(groupDatastore, authVerifier),
-		settlementpayments.NewModule(
+		settlementPayments.NewModule(
 			settlementPaymentDatastore,
 			settlementPlanService,
 			f.config,
 			authVerifier,
 		),
-		settlementplan.NewModule(settlementPlanDatastore, authVerifier),
+		settlementPlan.NewModule(settlementPlanDatastore, authVerifier),
 		user.NewModule(userDatastore, authVerifier),
 	}
 }

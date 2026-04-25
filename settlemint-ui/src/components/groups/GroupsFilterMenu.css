@@ -1,8 +1,10 @@
 .groups-filter-menu {
   position: absolute;
-  top: -6px;
-  left: calc(100% + 10px);
+  top: calc(100% + 10px);
+  left: auto;
+  right: 0;
   width: 208px;
+  max-width: min(208px, calc(100vw - 48px));
   max-height: min(340px, calc(100vh - 72px));
   overflow-y: auto;
   border-radius: 14px;
@@ -10,7 +12,12 @@
   background: linear-gradient(180deg, rgba(17, 47, 40, 0.98), rgba(9, 24, 20, 0.98));
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
   padding: 10px;
-  z-index: 15;
+  z-index: 60;
+}
+
+.groups-filter-menu-align-end {
+  left: auto;
+  right: 0;
 }
 
 .groups-filter-menu-section {
@@ -112,8 +119,11 @@
 
 @media (max-width: 1180px) {
   .groups-filter-menu {
-    left: auto;
     right: 0;
     top: calc(100% + 10px);
+  }
+
+  .groups-filter-menu-align-end {
+    right: 0;
   }
 }

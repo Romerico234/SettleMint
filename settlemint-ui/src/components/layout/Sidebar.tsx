@@ -1,9 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import type { Cycle, Group, GroupFilterMode, GroupSortMode, Tab } from "../../shared/types";
+import type {
+  ArchiveSortMode,
+  Cycle,
+  Group,
+  GroupFilterMode,
+  GroupSortMode,
+  Tab,
+} from "../../shared/types";
 import type { UserProfile } from "../../api/users";
 import filterOnIcon from "../../assets/filter-on.png";
 import filterOffIcon from "../../assets/filter-off.png";
 import { formatDisplayDateTime } from "../../lib/appHelpers";
+import ArchiveFilterMenu from "../archive/ArchiveFilterMenu";
 import GroupsFilterMenu from "../groups/GroupsFilterMenu";
 import "./Sidebar.css";
 
@@ -60,7 +68,10 @@ export default function Sidebar({
   const [displayNameDraft, setDisplayNameDraft] = useState("");
   const [copiedGroupId, setCopiedGroupId] = useState<string | null>(null);
   const [isGroupsFilterMenuOpen, setIsGroupsFilterMenuOpen] = useState(false);
+  const [isCyclesFilterMenuOpen, setIsCyclesFilterMenuOpen] = useState(false);
+  const [cycleSortMode, setCycleSortMode] = useState<ArchiveSortMode>("date");
   const groupsFilterMenuRef = useRef<HTMLDivElement | null>(null);
+  const cyclesFilterMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setDisplayNameDraft(profile?.displayName || "");
@@ -74,16 +85,30 @@ export default function Sidebar({
       ) {
         setIsGroupsFilterMenuOpen(false);
       }
+      if (
+        cyclesFilterMenuRef.current &&
+        !cyclesFilterMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsCyclesFilterMenuOpen(false);
+      }
     }
 
-    if (isGroupsFilterMenuOpen) {
+    if (isGroupsFilterMenuOpen || isCyclesFilterMenuOpen) {
       window.addEventListener("mousedown", handlePointerDown);
     }
 
     return () => {
       window.removeEventListener("mousedown", handlePointerDown);
     };
-  }, [isGroupsFilterMenuOpen]);
+  }, [isCyclesFilterMenuOpen, isGroupsFilterMenuOpen]);
+
+  const visibleCycles = [...cycles].sort((leftCycle, rightCycle) => {
+    if (cycleSortMode === "name") {
+      return leftCycle.name.localeCompare(rightCycle.name);
+    }
+
+    return new Date(rightCycle.createdAt).getTime() - new Date(leftCycle.createdAt).getTime();
+  });
 
   async function handleSaveDisplayName() {
     await onSaveProfile({ displayName: displayNameDraft.trim() });
@@ -318,11 +343,37 @@ export default function Sidebar({
       </div>
 
       <div className="sidebar-section">
-        <div className="sidebar-section-label">Settlement Cycles</div>
+        <div className="sidebar-section-header">
+          <div className="sidebar-section-label">Settlement Cycles</div>
+          <div className="sidebar-filter-anchor" ref={cyclesFilterMenuRef}>
+            <button
+              className={`sidebar-filter-toggle ${isCyclesFilterMenuOpen ? "active" : ""}`}
+              type="button"
+              onClick={() => setIsCyclesFilterMenuOpen((currentValue) => !currentValue)}
+              title="Open settlement cycle filters"
+              aria-label="Open settlement cycle filters"
+              aria-expanded={isCyclesFilterMenuOpen}
+            >
+              <img
+                src={isCyclesFilterMenuOpen ? filterOffIcon : filterOnIcon}
+                alt=""
+                className="sidebar-filter-toggle-icon"
+              />
+            </button>
+            <ArchiveFilterMenu
+              isOpen={isCyclesFilterMenuOpen}
+              sortMode={cycleSortMode}
+              onSortChange={(value) => {
+                setCycleSortMode(value);
+                setIsCyclesFilterMenuOpen(false);
+              }}
+            />
+          </div>
+        </div>
 
         <div className="sidebar-cycle-list">
-          {cycles.length > 0 ? (
-            cycles.map((cycle) => {
+          {visibleCycles.length > 0 ? (
+            visibleCycles.map((cycle) => {
               const isSelected = selectedCycle?.id === cycle.id;
 
               return (

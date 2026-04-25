@@ -7,6 +7,7 @@ type SettlementPlanTabProps = {
   selectedCycleName: string | null;
   loading: boolean;
   errorMessage: string | null;
+  cycleActionErrorMessage: string | null;
   currentWalletAddress: string | null;
   paymentPendingIDs: string[];
   paymentErrorMessage: string | null;
@@ -14,6 +15,10 @@ type SettlementPlanTabProps = {
   paymentSetupMessage: string;
   paymentRailLabel: string;
   paymentAssetSymbol: string;
+  showCloseCycleButton: boolean;
+  canCloseCycle: boolean;
+  closingCycle: boolean;
+  onCloseCycle: () => void;
   onPaySettlement: (repaymentBlock: RepaymentBlock) => void;
 };
 
@@ -23,6 +28,7 @@ export default function SettlementPlanTab({
   selectedCycleName,
   loading,
   errorMessage,
+  cycleActionErrorMessage,
   currentWalletAddress,
   paymentPendingIDs,
   paymentErrorMessage,
@@ -30,6 +36,10 @@ export default function SettlementPlanTab({
   paymentSetupMessage,
   paymentRailLabel,
   paymentAssetSymbol,
+  showCloseCycleButton,
+  canCloseCycle,
+  closingCycle,
+  onCloseCycle,
   onPaySettlement,
 }: SettlementPlanTabProps) {
   const normalizedCurrentWalletAddress = currentWalletAddress?.toLowerCase() ?? null;
@@ -38,13 +48,30 @@ export default function SettlementPlanTab({
     <section className="dashboard-grid dashboard-grid-body">
       <article className="dashboard-card section-card section-card-full">
         <div className="section-card-header">
-          <div>
+          <div className="settlement-header-copy">
             <h3 className="section-card-title">Settlement Plan</h3>
             <p className="section-card-copy">
               The minimal repayment plan for the current Settlement Cycle will appear here.
             </p>
             <p className="row-copy settlement-rail-copy">Payment Rail: {paymentRailLabel}</p>
           </div>
+          {showCloseCycleButton ? (
+            <span
+              className={`settlement-close-button-wrap ${!canCloseCycle ? "is-disabled" : ""}`}
+              title={!canCloseCycle ? "Resolve pending expenses!" : undefined}
+            >
+              <button
+                className={`btn btn-secondary settlement-close-button ${
+                  !canCloseCycle ? "is-disabled" : ""
+                }`}
+                type="button"
+                onClick={onCloseCycle}
+                disabled={!canCloseCycle || closingCycle}
+              >
+                {closingCycle ? "Closing..." : "Close Cycle"}
+              </button>
+            </span>
+          ) : null}
         </div>
         <p
           className={`empty-copy settlement-setup-copy ${
@@ -54,6 +81,7 @@ export default function SettlementPlanTab({
           {paymentSetupMessage}
         </p>
         {errorMessage && <p className="section-error">{errorMessage}</p>}
+        {cycleActionErrorMessage && <p className="section-error">{cycleActionErrorMessage}</p>}
         {paymentErrorMessage && <p className="section-error">{paymentErrorMessage}</p>}
         {!selectedCycleName ? (
           <p className="empty-copy">Choose a Settlement Cycle to generate a settlement plan.</p>

@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import type { Cycle } from "../shared/types";
+import type { Cycle, CycleArchive } from "../shared/types";
 
 export async function fetchGroupCycles(groupID: string) {
   const response = await apiFetch(`/groups/${groupID}/cycles/`);
@@ -24,4 +24,33 @@ export async function createSettlementCycle(groupID: string, input: { name: stri
   }
 
   return (await response.json()) as { cycle: Cycle };
+}
+
+export async function fetchGroupCycleArchives(groupID: string) {
+  const response = await apiFetch(`/groups/${groupID}/cycles/archives/`);
+
+  if (!response.ok) {
+    const errorBody = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(errorBody?.error || "Failed to load archived settlement cycles");
+  }
+
+  return (await response.json()) as { archives: CycleArchive[] };
+}
+
+export async function closeSettlementCycle(
+  groupID: string,
+  cycleID: string,
+  input: { archiveNotes?: string } = {},
+) {
+  const response = await apiFetch(`/groups/${groupID}/cycles/${cycleID}/close/`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    const errorBody = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(errorBody?.error || "Failed to close settlement cycle");
+  }
+
+  return (await response.json()) as { archive: CycleArchive };
 }
