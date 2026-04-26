@@ -106,3 +106,8 @@ type ArchiveResponse struct {
 type ArchivesResponse struct {
 	Archives []ArchiveSummary `json:"archives"`
 }
+
+type ArchiveRecord struct {
+	Summary  ArchiveSummary       `json:"summary"`
+	Snapshot ArchiveCycleSnapshot `json:"snapshot"`
+}

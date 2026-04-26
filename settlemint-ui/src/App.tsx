@@ -262,7 +262,10 @@ export default function App() {
           )}
 
           {selectedTab === "Archive" && (
-            <ArchiveTab archivedCycles={groupDirectory.cycles.archived} />
+            <ArchiveTab
+              groupID={groupDirectory.groups.current?.id ?? ""}
+              archivedCycles={groupDirectory.cycles.archived}
+            />
           )}
         </main>
       </div>

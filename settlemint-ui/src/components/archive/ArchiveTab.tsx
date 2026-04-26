@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { fetchArchiveCycleJSON } from "../../api/cycles";
 import type { ArchiveSortMode, CycleArchive } from "../../shared/types";
-import { formatDisplayDateTime } from "../../lib/appHelpers";
 import filterOnIcon from "../../assets/filter-on.png";
 import filterOffIcon from "../../assets/filter-off.png";
 import ArchiveFilterMenu from "./ArchiveFilterMenu";
 
 type ArchiveTabProps = {
+  groupID: string;
   archivedCycles: CycleArchive[];
 };
 
-export default function ArchiveTab({ archivedCycles }: ArchiveTabProps) {
+export default function ArchiveTab({ groupID, archivedCycles }: ArchiveTabProps) {
   const [sortMode, setSortMode] = useState<ArchiveSortMode>("date");
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+  const [openingArchiveID, setOpeningArchiveID] = useState<string | null>(null);
   const filterMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -45,15 +47,47 @@ export default function ArchiveTab({ archivedCycles }: ArchiveTabProps) {
     );
   }, [archivedCycles, sortMode]);
 
+  async function handleOpenArchiveJSON(archiveID: string) {
+    if (!groupID || openingArchiveID) {
+      return;
+    }
+
+    const archiveWindow = window.open("", "_blank");
+    setOpeningArchiveID(archiveID);
+
+    try {
+      const archiveBlob = await fetchArchiveCycleJSON(groupID, archiveID);
+      const archiveURL = URL.createObjectURL(archiveBlob);
+
+      if (archiveWindow) {
+        archiveWindow.location.href = archiveURL;
+      } else {
+        window.open(archiveURL, "_blank");
+      }
+
+      window.setTimeout(() => {
+        URL.revokeObjectURL(archiveURL);
+      }, 60_000);
+    } catch (error) {
+      if (archiveWindow) {
+        archiveWindow.close();
+      }
+
+      const message =
+        error instanceof Error ? error.message : "Failed to load archived cycle JSON";
+      window.alert(message);
+    } finally {
+      setOpeningArchiveID(null);
+    }
+  }
+
   return (
     <section className="dashboard-grid dashboard-grid-body">
       <article className="dashboard-card section-card section-card-full">
         <div className="section-card-header">
           <div>
             <h3 className="section-card-title">Archive</h3>
-            <p className="section-card-copy">
-              Closed Settlement Cycles live here with their archived summary and storage reference.
-            </p>
+            <p className="section-card-copy">Closed Settlement Cycles live here.</p>
           </div>
           <div className="sidebar-filter-anchor" ref={filterMenuRef}>
             <button
@@ -85,21 +119,14 @@ export default function ArchiveTab({ archivedCycles }: ArchiveTabProps) {
           <div className="simple-list archive-list-scroll">
             {visibleArchives.map((cycle) => (
               <div className="simple-row" key={cycle.id}>
-                <div>
-                  <strong>{cycle.cycleName}</strong>
-                  <p className="row-copy">Archive CID: {cycle.archiveCid}</p>
-                  <p className="row-copy">
-                    <a
-                      className="settlement-transaction-link"
-                      href={cycle.archiveHttpUrl || buildArchiveHttpUrl(cycle.archiveCid)}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Archive JSON
-                    </a>
-                  </p>
-                </div>
-                <span>{formatDisplayDateTime(cycle.closedAt)}</span>
+                <button
+                  className="settlement-transaction-link"
+                  type="button"
+                  onClick={() => void handleOpenArchiveJSON(cycle.id)}
+                  disabled={openingArchiveID === cycle.id}
+                >
+                  {openingArchiveID === cycle.id ? "Opening Archive JSON..." : "Archive JSON"}
+                </button>
               </div>
             ))}
           </div>
@@ -109,8 +136,4 @@ export default function ArchiveTab({ archivedCycles }: ArchiveTabProps) {
       </article>
     </section>
   );
-}
-
-function buildArchiveHttpUrl(archiveCid: string) {
-  return `https://ipfs.io/ipfs/${archiveCid}`;
 }

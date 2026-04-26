@@ -1,11 +1,13 @@
 package cycles
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"strings"
 
+	"settlemint-service/internal/core/ipfs"
 	"settlemint-service/internal/core/server"
 	"settlemint-service/internal/modules/auth"
 	settlementPlan "settlemint-service/internal/modules/settlement-plan"
@@ -18,10 +20,10 @@ type Module struct {
 	service    *Service
 }
 
-func NewModule(store *Store, planner *settlementPlan.Service, verifier auth.TokenVerifier) Module {
+func NewModule(store *Store, planner *settlementPlan.Service, ipfsClient ipfs.Client, verifier auth.TokenVerifier) Module {
 	return Module{
 		middleware: auth.Middleware(verifier),
-		service:    NewService(store, planner),
+		service:    NewService(store, planner, ipfsClient),
 	}
 }
 
@@ -31,6 +33,7 @@ func (m Module) RegisterRoutes(r chi.Router) {
 		r.Get("/", m.ListCycles)
 		r.Post("/", m.CreateCycle)
 		r.Get("/archives/", m.ListArchives)
+		r.Get("/archives/{archiveID}/json/", m.GetArchiveJSON)
 		r.Post("/{cycleID}/close/", m.CloseCycle)
 	})
 }
@@ -170,6 +173,39 @@ func (m Module) CloseCycle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	server.WriteJSON(w, http.StatusOK, ArchiveResponse{Archive: archive})
+}
+
+func (m Module) GetArchiveJSON(w http.ResponseWriter, r *http.Request) {
+	authUser, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		server.WriteError(w, http.StatusUnauthorized, "Missing authenticated user")
+		return
+	}
+
+	groupID := strings.TrimSpace(chi.URLParam(r, "groupID"))
+	archiveID := strings.TrimSpace(chi.URLParam(r, "archiveID"))
+	if groupID == "" || archiveID == "" {
+		server.WriteError(w, http.StatusBadRequest, "Group ID and archive ID are required")
+		return
+	}
+
+	snapshot, err := m.service.GetArchiveSnapshot(r.Context(), authUser, groupID, archiveID)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrGroupMembershipRequired), errors.Is(err, ErrArchiveNotFound):
+			server.WriteError(w, http.StatusNotFound, capitalizeError(err.Error()))
+			return
+		case errors.Is(err, ErrArchivePayloadMismatch):
+			server.WriteError(w, http.StatusConflict, capitalizeError(err.Error()))
+			return
+		}
+		server.WriteError(w, http.StatusInternalServerError, capitalizeError(err.Error()))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(snapshot)
 }
 
 func validateCreateCycleInput(input CreateCycleRequest) error {

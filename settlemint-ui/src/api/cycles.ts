@@ -54,3 +54,14 @@ export async function closeSettlementCycle(
 
   return (await response.json()) as { archive: CycleArchive };
 }
+
+export async function fetchArchiveCycleJSON(groupID: string, archiveID: string) {
+  const response = await apiFetch(`/groups/${groupID}/cycles/archives/${archiveID}/json/`);
+
+  if (!response.ok) {
+    const errorBody = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(errorBody?.error || "Failed to load archived cycle JSON");
+  }
+
+  return response.blob();
+}

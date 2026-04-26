@@ -20,6 +20,8 @@ type Config struct {
 	MongoDatabase          string
 	AuthTokenSecret        string
 	CORSAllowedOrigin      string
+	IPFSAPIURL             string
+	IPFSGatewayURL         string
 	SettlementNetwork      string
 	SettlementRPCURL       string
 	SettlementChainID      int64
@@ -46,6 +48,8 @@ func Load() Config {
 		MongoDatabase:          loadMongoDatabase(appEnv),
 		AuthTokenSecret:        loadAuthTokenSecret(appEnv),
 		CORSAllowedOrigin:      corsAllowedOrigin,
+		IPFSAPIURL:             loadIPFSAPIURL(),
+		IPFSGatewayURL:         loadIPFSGatewayURL(),
 		SettlementNetwork:      loadSettlementNetwork(),
 		SettlementRPCURL:       loadSettlementRPCURL(),
 		SettlementChainID:      loadSettlementChainID(),
@@ -72,6 +76,14 @@ func (c Config) Validate() error {
 
 	if c.AppEnv == EnvironmentProduction && c.CORSAllowedOrigin == "" {
 		return fmt.Errorf("CORS_ALLOWED_ORIGIN is required in production")
+	}
+
+	if c.IPFSAPIURL == "" {
+		return fmt.Errorf("IPFS_API_URL is required")
+	}
+
+	if c.IPFSGatewayURL == "" {
+		return fmt.Errorf("IPFS_GATEWAY_URL is required")
 	}
 
 	if c.SettlementChainID <= 0 {
@@ -148,6 +160,24 @@ func loadSettlementNetwork() string {
 	}
 
 	return "localhost"
+}
+
+func loadIPFSAPIURL() string {
+	value := strings.TrimSpace(os.Getenv("IPFS_API_URL"))
+	if value != "" {
+		return value
+	}
+
+	return "http://127.0.0.1:5001"
+}
+
+func loadIPFSGatewayURL() string {
+	value := strings.TrimSpace(os.Getenv("IPFS_GATEWAY_URL"))
+	if value != "" {
+		return value
+	}
+
+	return "http://127.0.0.1:8080"
 }
 
 func loadSettlementRPCURL() string {

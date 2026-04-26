@@ -223,6 +223,35 @@ func (s *Store) ListArchivesByGroup(ctx context.Context, authUser auth.User, gro
 	return archives, nil
 }
 
+func (s *Store) FindArchiveByID(
+	ctx context.Context,
+	authUser auth.User,
+	groupID string,
+	archiveID string,
+) (ArchiveSummary, error) {
+	memberWallet := normalizeWalletAddress(authUser.WalletAddress)
+	if memberWallet == "" {
+		return ArchiveSummary{}, errors.New("authenticated wallet address is invalid")
+	}
+
+	if _, err := s.findMembershipRole(ctx, groupID, memberWallet); err != nil {
+		return ArchiveSummary{}, err
+	}
+
+	var archive ArchiveSummary
+	if err := s.cycleArchivesCollection.FindOne(ctx, bson.M{
+		"_id":      archiveID,
+		"group_id": groupID,
+	}).Decode(&archive); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return ArchiveSummary{}, ErrCycleNotFound
+		}
+		return ArchiveSummary{}, fmt.Errorf("find cycle archive: %w", err)
+	}
+
+	return archive, nil
+}
+
 func (s *Store) LoadArchiveSeed(
 	ctx context.Context,
 	authUser auth.User,
