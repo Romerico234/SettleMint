@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ArchiveSortMode, CycleArchive } from "../../shared/types";
+import { apiBaseURL } from "../../api/config";
 import { formatDisplayDateTime } from "../../lib/appHelpers";
 import filterOnIcon from "../../assets/filter-on.png";
 import filterOffIcon from "../../assets/filter-off.png";
@@ -91,7 +92,7 @@ export default function ArchiveTab({ archivedCycles }: ArchiveTabProps) {
                   <p className="row-copy">
                     <a
                       className="settlement-transaction-link"
-                      href={cycle.archiveHttpUrl || buildArchiveHttpUrl(cycle.archiveCid)}
+                      href={buildArchiveJSONUrl(cycle.groupId, cycle.id)}
                       target="_blank"
                       rel="noreferrer"
                     >
@@ -111,6 +112,6 @@ export default function ArchiveTab({ archivedCycles }: ArchiveTabProps) {
   );
 }
 
-function buildArchiveHttpUrl(archiveCid: string) {
-  return `https://ipfs.io/ipfs/${archiveCid}`;
+function buildArchiveJSONUrl(groupID: string, archiveID: string) {
+  return `${apiBaseURL}/groups/${groupID}/cycles/archives/${archiveID}/json`;
 }

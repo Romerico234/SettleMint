@@ -8,7 +8,6 @@ import (
 	"errors"
 	"strings"
 
-	"settlemint-service/internal/core/ipfs"
 	"settlemint-service/internal/modules/auth"
 	settlementPlan "settlemint-service/internal/modules/settlement-plan"
 )
@@ -31,12 +30,20 @@ type settlementPlanner interface {
 type Service struct {
 	store   *Store
 	planner settlementPlanner
+	ipfs    archiveStorage
 }
 
-func NewService(store *Store, planner settlementPlanner) *Service {
+type archiveStorage interface {
+	AddJSON(ctx context.Context, fileName string, payload []byte) (string, error)
+	FetchJSON(ctx context.Context, cid string) ([]byte, error)
+	GatewayURL(cid string) string
+}
+
+func NewService(store *Store, planner settlementPlanner, archiveClient archiveStorage) *Service {
 	return &Service{
 		store:   store,
 		planner: planner,
+		ipfs:    archiveClient,
 	}
 }
 
@@ -80,6 +87,8 @@ func (s *Service) CloseCycle(
 		return ArchiveSummary{}, ErrCycleHasOutstandingItems
 	}
 
+	cycle.Status = StatusArchived
+
 	snapshot := ArchiveCycleSnapshot{
 		SchemaVersion:  "2026-04-25",
 		Group:          archiveSeed.Group,
@@ -92,12 +101,17 @@ func (s *Service) CloseCycle(
 		Summary:        summary,
 	}
 
-	archivePayloadSHA256, err := archivePayloadSHA256(snapshot)
+	rawSnapshot, err := json.Marshal(snapshot)
 	if err != nil {
 		return ArchiveSummary{}, err
 	}
 
-	archiveCID := ipfs.PendingArchiveCID(archiveSeed.ArchiveID)
+	archivePayloadSHA256 := payloadSHA256(rawSnapshot)
+	archiveCID, err := s.ipfs.AddJSON(ctx, archiveSeed.ArchiveID+".json", rawSnapshot)
+	if err != nil {
+		return ArchiveSummary{}, err
+	}
+
 	archive := ArchiveSummary{
 		ID:                   archiveSeed.ArchiveID,
 		GroupID:              groupID,
@@ -105,9 +119,9 @@ func (s *Service) CloseCycle(
 		CycleName:            cycle.Name,
 		Status:               StatusArchived,
 		ArchiveCID:           archiveCID,
-		ArchiveHTTPURL:       archiveHTTPURL(archiveCID),
+		ArchiveHTTPURL:       s.ipfs.GatewayURL(archiveCID),
 		ArchiveProvider:      "ipfs",
-		ArchiveMode:          "pending",
+		ArchiveMode:          "kubo-http",
 		ArchivePayloadSHA256: archivePayloadSHA256,
 		ClosedAt:             archiveSeed.ClosedAt,
 	}
@@ -117,6 +131,29 @@ func (s *Service) CloseCycle(
 	}
 
 	return archive, nil
+}
+
+func (s *Service) GetArchiveSnapshot(ctx context.Context, groupID string, archiveID string) (ArchiveCycleSnapshot, error) {
+	archive, err := s.store.FindArchiveByID(ctx, strings.TrimSpace(groupID), strings.TrimSpace(archiveID))
+	if err != nil {
+		return ArchiveCycleSnapshot{}, err
+	}
+
+	rawSnapshot, err := s.ipfs.FetchJSON(ctx, archive.ArchiveCID)
+	if err != nil {
+		return ArchiveCycleSnapshot{}, err
+	}
+
+	if payloadSHA256(rawSnapshot) != archive.ArchivePayloadSHA256 {
+		return ArchiveCycleSnapshot{}, errors.New("archived cycle payload hash verification failed")
+	}
+
+	var snapshot ArchiveCycleSnapshot
+	if err := json.Unmarshal(rawSnapshot, &snapshot); err != nil {
+		return ArchiveCycleSnapshot{}, err
+	}
+
+	return snapshot, nil
 }
 
 func cycleCanClose(summary settlementPlan.Summary) bool {
@@ -133,16 +170,7 @@ func cycleCanClose(summary settlementPlan.Summary) bool {
 	return true
 }
 
-func archivePayloadSHA256(snapshot ArchiveCycleSnapshot) (string, error) {
-	rawSnapshot, err := json.Marshal(snapshot)
-	if err != nil {
-		return "", err
-	}
-
+func payloadSHA256(rawSnapshot []byte) string {
 	hash := sha256.Sum256(rawSnapshot)
-	return hex.EncodeToString(hash[:]), nil
-}
-
-func archiveHTTPURL(archiveCID string) string {
-	return "https://ipfs.io/ipfs/" + strings.TrimSpace(archiveCID)
+	return hex.EncodeToString(hash[:])
 }

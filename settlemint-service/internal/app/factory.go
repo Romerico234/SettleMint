@@ -2,6 +2,7 @@ package app
 
 import (
 	"settlemint-service/internal/core/config"
+	"settlemint-service/internal/core/ipfs"
 	"settlemint-service/internal/core/server"
 	"settlemint-service/internal/modules/auth"
 	"settlemint-service/internal/modules/cycles"
@@ -35,10 +36,11 @@ func (f Factory) BuildModules() (auth.TokenVerifier, []server.RouteModule) {
 	settlementPlanDatastore := settlementPlan.NewDatastore(f.db)
 	settlementPlanService := settlementPlan.NewService(settlementPlanDatastore)
 	settlementPaymentDatastore := settlementPayments.NewDatastore(f.db)
+	ipfsClient := ipfs.NewClient(f.config)
 
 	return authVerifier, []server.RouteModule{
 		auth.NewModule(authVerifier),
-		cycles.NewModule(cycleDatastore, settlementPlanService, authVerifier),
+		cycles.NewModule(cycleDatastore, settlementPlanService, ipfsClient, authVerifier),
 		expenses.NewModule(expenseDatastore, authVerifier),
 		groups.NewModule(groupDatastore, authVerifier),
 		settlementPayments.NewModule(

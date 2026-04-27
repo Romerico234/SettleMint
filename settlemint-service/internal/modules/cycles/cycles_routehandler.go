@@ -18,14 +18,16 @@ type Module struct {
 	service    *Service
 }
 
-func NewModule(store *Store, planner *settlementPlan.Service, verifier auth.TokenVerifier) Module {
+func NewModule(store *Store, planner *settlementPlan.Service, archiveClient archiveStorage, verifier auth.TokenVerifier) Module {
 	return Module{
 		middleware: auth.Middleware(verifier),
-		service:    NewService(store, planner),
+		service:    NewService(store, planner, archiveClient),
 	}
 }
 
 func (m Module) RegisterRoutes(r chi.Router) {
+	r.Get("/groups/{groupID}/cycles/archives/{archiveID}/json", m.GetArchiveJSON)
+
 	r.Route("/groups/{groupID}/cycles", func(r chi.Router) {
 		r.Use(m.middleware)
 		r.Get("/", m.ListCycles)
@@ -170,6 +172,28 @@ func (m Module) CloseCycle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	server.WriteJSON(w, http.StatusOK, ArchiveResponse{Archive: archive})
+}
+
+func (m Module) GetArchiveJSON(w http.ResponseWriter, r *http.Request) {
+	groupID := strings.TrimSpace(chi.URLParam(r, "groupID"))
+	archiveID := strings.TrimSpace(chi.URLParam(r, "archiveID"))
+	if groupID == "" || archiveID == "" {
+		server.WriteError(w, http.StatusBadRequest, "Group ID and archive ID are required")
+		return
+	}
+
+	snapshot, err := m.service.GetArchiveSnapshot(r.Context(), groupID, archiveID)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrCycleNotFound):
+			server.WriteError(w, http.StatusNotFound, capitalizeError(err.Error()))
+			return
+		}
+		server.WriteError(w, http.StatusInternalServerError, capitalizeError(err.Error()))
+		return
+	}
+
+	server.WriteJSON(w, http.StatusOK, snapshot)
 }
 
 func validateCreateCycleInput(input CreateCycleRequest) error {
