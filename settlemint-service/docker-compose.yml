@@ -13,6 +13,17 @@ services:
       - mongo-data:/data/db
     restart: unless-stopped
 
+  settlemint-ipfs:
+    image: ipfs/kubo:latest
+    container_name: settlemint-ipfs
+    ports:
+      - "4001:4001"
+      - "5001:5001"
+      - "8081:8080"
+    volumes:
+      - ipfs-data:/data/ipfs
+    restart: unless-stopped
+
   settlemint-service:
     build:
       context: .
@@ -25,7 +36,10 @@ services:
     depends_on:
       settlemint-mongo:
         condition: service_healthy
+      settlemint-ipfs:
+        condition: service_started
     restart: unless-stopped
 
 volumes:
   mongo-data:
+  ipfs-data:
