@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { closeSettlementCycle, fetchGroupCycleArchives, fetchGroupCycles } from "../api/cycles";
+import { closeSettlementCycle, fetchGroupCycles, fetchMyCycleArchives } from "../api/cycles";
 import { fetchGroupMembers, fetchMyGroups } from "../api/groups";
 import { useCreateCycleDialog } from "./useCreateCycleDialog";
 import { useCreateGroupDialog } from "./useCreateGroupDialog";
@@ -183,23 +183,46 @@ export function useGroupDirectory({
   }, [accessToken, requestedGroupID]);
 
   useEffect(() => {
+    if (!accessToken) {
+      setArchivedCycles([]);
+      return;
+    }
+
+    let mounted = true;
+
+    fetchMyCycleArchives()
+      .then((result) => {
+        if (mounted) {
+          setArchivedCycles(result.archives);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setArchivedCycles([]);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [accessToken]);
+
+  useEffect(() => {
     if (!accessToken || !currentGroup) {
       setSettlementCycles([]);
-      setArchivedCycles([]);
       setCurrentCycle(null);
       return;
     }
 
     let mounted = true;
 
-    Promise.all([fetchGroupCycles(currentGroup.id), fetchGroupCycleArchives(currentGroup.id)])
-      .then(([cyclesResult, archivesResult]) => {
+    fetchGroupCycles(currentGroup.id)
+      .then((cyclesResult) => {
         if (!mounted) {
           return;
         }
 
         setSettlementCycles(cyclesResult.cycles);
-        setArchivedCycles(archivesResult.archives);
         setCurrentCycle((selectedCycle) =>
           resolveSelection(cyclesResult.cycles, selectedCycle, requestedCycleID),
         );
@@ -210,7 +233,6 @@ export function useGroupDirectory({
         }
 
         setSettlementCycles([]);
-        setArchivedCycles([]);
         setCurrentCycle(null);
       });
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ArchiveSortMode, CycleArchive } from "../../shared/types";
+import { fetchArchiveSnapshot } from "../../api/cycles";
 import { formatDisplayDateTime } from "../../lib/appHelpers";
 import filterOnIcon from "../../assets/filter-on.png";
 import filterOffIcon from "../../assets/filter-off.png";
@@ -12,6 +13,7 @@ type ArchiveTabProps = {
 export default function ArchiveTab({ archivedCycles }: ArchiveTabProps) {
   const [sortMode, setSortMode] = useState<ArchiveSortMode>("date");
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+  const [downloadingArchiveID, setDownloadingArchiveID] = useState<string | null>(null);
   const filterMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -44,6 +46,22 @@ export default function ArchiveTab({ archivedCycles }: ArchiveTabProps) {
         new Date(rightArchive.closedAt).getTime() - new Date(leftArchive.closedAt).getTime(),
     );
   }, [archivedCycles, sortMode]);
+
+  async function handleOpenArchiveJSON(archiveID: string) {
+    setDownloadingArchiveID(archiveID);
+
+    try {
+      const snapshot = await fetchArchiveSnapshot(archiveID);
+      const file = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
+      const objectURL = window.URL.createObjectURL(file);
+      window.open(objectURL, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => window.URL.revokeObjectURL(objectURL), 60_000);
+    } finally {
+      setDownloadingArchiveID((currentArchiveID) =>
+        currentArchiveID === archiveID ? null : currentArchiveID,
+      );
+    }
+  }
 
   return (
     <section className="dashboard-grid dashboard-grid-body">
@@ -89,14 +107,14 @@ export default function ArchiveTab({ archivedCycles }: ArchiveTabProps) {
                   <strong>{cycle.cycleName}</strong>
                   <p className="row-copy">Archive CID: {cycle.archiveCid}</p>
                   <p className="row-copy">
-                    <a
+                    <button
                       className="settlement-transaction-link"
-                      href={cycle.archiveHttpUrl || buildArchiveHttpUrl(cycle.archiveCid)}
-                      target="_blank"
-                      rel="noreferrer"
+                      type="button"
+                      onClick={() => void handleOpenArchiveJSON(cycle.id)}
+                      disabled={downloadingArchiveID === cycle.id}
                     >
-                      Archive JSON
-                    </a>
+                      {downloadingArchiveID === cycle.id ? "Opening..." : "Archive JSON"}
+                    </button>
                   </p>
                 </div>
                 <span>{formatDisplayDateTime(cycle.closedAt)}</span>
@@ -109,8 +127,4 @@ export default function ArchiveTab({ archivedCycles }: ArchiveTabProps) {
       </article>
     </section>
   );
-}
-
-function buildArchiveHttpUrl(archiveCid: string) {
-  return `https://ipfs.io/ipfs/${archiveCid}`;
 }

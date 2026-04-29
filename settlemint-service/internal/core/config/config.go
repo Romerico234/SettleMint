@@ -20,6 +20,8 @@ type Config struct {
 	MongoDatabase          string
 	AuthTokenSecret        string
 	CORSAllowedOrigin      string
+	IPFSAPIURL             string
+	IPFSGatewayURL         string
 	SettlementNetwork      string
 	SettlementRPCURL       string
 	SettlementChainID      int64
@@ -46,6 +48,8 @@ func Load() Config {
 		MongoDatabase:          loadMongoDatabase(appEnv),
 		AuthTokenSecret:        loadAuthTokenSecret(appEnv),
 		CORSAllowedOrigin:      corsAllowedOrigin,
+		IPFSAPIURL:             loadIPFSAPIURL(),
+		IPFSGatewayURL:         loadIPFSGatewayURL(),
 		SettlementNetwork:      loadSettlementNetwork(),
 		SettlementRPCURL:       loadSettlementRPCURL(),
 		SettlementChainID:      loadSettlementChainID(),
@@ -76,6 +80,14 @@ func (c Config) Validate() error {
 
 	if c.SettlementChainID <= 0 {
 		return fmt.Errorf("SETTLEMENT_CHAIN_ID must be greater than 0")
+	}
+
+	if c.IPFSAPIURL == "" {
+		return fmt.Errorf("IPFS_API_URL is required")
+	}
+
+	if c.IPFSGatewayURL == "" {
+		return fmt.Errorf("IPFS_GATEWAY_URL is required")
 	}
 
 	if c.SettlementProofAddress == "" {
@@ -148,6 +160,14 @@ func loadSettlementNetwork() string {
 	}
 
 	return "localhost"
+}
+
+func loadIPFSAPIURL() string {
+	return strings.TrimSpace(os.Getenv("IPFS_API_URL"))
+}
+
+func loadIPFSGatewayURL() string {
+	return strings.TrimSpace(os.Getenv("IPFS_GATEWAY_URL"))
 }
 
 func loadSettlementRPCURL() string {

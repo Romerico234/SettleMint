@@ -26,8 +26,8 @@ export async function createSettlementCycle(groupID: string, input: { name: stri
   return (await response.json()) as { cycle: Cycle };
 }
 
-export async function fetchGroupCycleArchives(groupID: string) {
-  const response = await apiFetch(`/groups/${groupID}/cycles/archives/`);
+export async function fetchMyCycleArchives() {
+  const response = await apiFetch("/cycles/archives/");
 
   if (!response.ok) {
     const errorBody = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -35,6 +35,17 @@ export async function fetchGroupCycleArchives(groupID: string) {
   }
 
   return (await response.json()) as { archives: CycleArchive[] };
+}
+
+export async function fetchArchiveSnapshot(archiveID: string) {
+  const response = await apiFetch(`/cycles/archives/${archiveID}/json`);
+
+  if (!response.ok) {
+    const errorBody = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(errorBody?.error || "Failed to load archived settlement cycle");
+  }
+
+  return await response.json();
 }
 
 export async function closeSettlementCycle(

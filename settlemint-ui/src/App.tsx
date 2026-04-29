@@ -71,6 +71,7 @@ export default function App() {
     onPaymentStateChanged: settlementLedger.refresh,
   });
   const showSettlementCycleAction = groupDirectory.cycles.canCreate;
+  const isArchiveTab = selectedTab === "Archive";
 
   async function handleCloseCycle() {
     const archive = await groupDirectory.cycles.close();
@@ -180,24 +181,36 @@ export default function App() {
         <main className="app-main">
           <Header
             actionsDisabled={!accessToken}
-            showSettlementCycleAction={showSettlementCycleAction}
+            showSettlementCycleAction={!isArchiveTab && showSettlementCycleAction}
+            eyebrow={isArchiveTab ? "SettleMint Archive" : undefined}
+            title={
+              isArchiveTab ? "Archived Settlements" : undefined
+            }
+            subtitle={
+              isArchiveTab
+                ? "Browse closed settlement cycles without the live group controls and active cycle summary."
+                : undefined
+            }
+            showActions={!isArchiveTab}
             onCreateGroup={groupDirectory.dialogs.createGroup.open}
             onJoinGroup={groupDirectory.dialogs.joinGroup.open}
             onCreateSettlementPeriod={groupDirectory.dialogs.createCycle.open}
           />
 
-          <HeroSection
-            currentGroup={groupDirectory.groups.current}
-            currentWalletAddress={walletAddress}
-            groupMembers={groupDirectory.groups.members}
-            hasSelectedCycle={settlementLedger.cycle.hasSelected}
-            expenseTotal={settlementLedger.summary.totals.expenseTotal}
-            pendingCount={settlementLedger.summary.totals.pendingCount}
-            verifiedCount={settlementLedger.summary.totals.verifiedCount}
-            actionLoading={groupDirectory.dialogs.groupAction.submitting}
-            onLeaveGroup={() => groupDirectory.dialogs.groupAction.request("leave")}
-            onDeleteGroup={() => groupDirectory.dialogs.groupAction.request("delete")}
-          />
+          {!isArchiveTab && (
+            <HeroSection
+              currentGroup={groupDirectory.groups.current}
+              currentWalletAddress={walletAddress}
+              groupMembers={groupDirectory.groups.members}
+              hasSelectedCycle={settlementLedger.cycle.hasSelected}
+              expenseTotal={settlementLedger.summary.totals.expenseTotal}
+              pendingCount={settlementLedger.summary.totals.pendingCount}
+              verifiedCount={settlementLedger.summary.totals.verifiedCount}
+              actionLoading={groupDirectory.dialogs.groupAction.submitting}
+              onLeaveGroup={() => groupDirectory.dialogs.groupAction.request("leave")}
+              onDeleteGroup={() => groupDirectory.dialogs.groupAction.request("delete")}
+            />
+          )}
 
           {selectedTab === "Overview" && (
             <OverviewTab
