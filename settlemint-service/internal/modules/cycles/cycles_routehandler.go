@@ -26,13 +26,16 @@ func NewModule(store *Store, planner *settlementPlan.Service, archiveClient arch
 }
 
 func (m Module) RegisterRoutes(r chi.Router) {
-	r.Get("/groups/{groupID}/cycles/archives/{archiveID}/json", m.GetArchiveJSON)
+	r.Group(func(r chi.Router) {
+		r.Use(m.middleware)
+		r.Get("/cycles/archives/", m.ListArchives)
+		r.Get("/cycles/archives/{archiveID}/json", m.GetArchiveJSON)
+	})
 
 	r.Route("/groups/{groupID}/cycles", func(r chi.Router) {
 		r.Use(m.middleware)
 		r.Get("/", m.ListCycles)
 		r.Post("/", m.CreateCycle)
-		r.Get("/archives/", m.ListArchives)
 		r.Post("/{cycleID}/close/", m.CloseCycle)
 	})
 }
@@ -113,18 +116,8 @@ func (m Module) ListArchives(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	groupID := strings.TrimSpace(chi.URLParam(r, "groupID"))
-	if groupID == "" {
-		server.WriteError(w, http.StatusBadRequest, "Group ID is required")
-		return
-	}
-
-	archives, err := m.service.ListArchives(r.Context(), authUser, groupID)
+	archives, err := m.service.ListArchives(r.Context(), authUser)
 	if err != nil {
-		if errors.Is(err, ErrGroupMembershipRequired) {
-			server.WriteError(w, http.StatusNotFound, capitalizeError(err.Error()))
-			return
-		}
 		server.WriteError(w, http.StatusInternalServerError, capitalizeError(err.Error()))
 		return
 	}
@@ -175,14 +168,19 @@ func (m Module) CloseCycle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m Module) GetArchiveJSON(w http.ResponseWriter, r *http.Request) {
-	groupID := strings.TrimSpace(chi.URLParam(r, "groupID"))
 	archiveID := strings.TrimSpace(chi.URLParam(r, "archiveID"))
-	if groupID == "" || archiveID == "" {
-		server.WriteError(w, http.StatusBadRequest, "Group ID and archive ID are required")
+	if archiveID == "" {
+		server.WriteError(w, http.StatusBadRequest, "Archive ID is required")
 		return
 	}
 
-	snapshot, err := m.service.GetArchiveSnapshot(r.Context(), groupID, archiveID)
+	authUser, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		server.WriteError(w, http.StatusUnauthorized, "Missing authenticated user")
+		return
+	}
+
+	snapshot, err := m.service.GetArchiveSnapshot(r.Context(), authUser, archiveID)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrCycleNotFound):

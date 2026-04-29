@@ -188,19 +188,15 @@ func (s *Store) ListCyclesByGroup(ctx context.Context, authUser auth.User, group
 	return cycles, nil
 }
 
-func (s *Store) ListArchivesByGroup(ctx context.Context, authUser auth.User, groupID string) ([]ArchiveSummary, error) {
+func (s *Store) ListArchivesByWallet(ctx context.Context, authUser auth.User) ([]ArchiveSummary, error) {
 	memberWallet := normalizeWalletAddress(authUser.WalletAddress)
 	if memberWallet == "" {
 		return nil, errors.New("authenticated wallet address is invalid")
 	}
 
-	if _, err := s.findMembershipRole(ctx, groupID, memberWallet); err != nil {
-		return nil, err
-	}
-
 	cursor, err := s.cycleArchivesCollection.Find(
 		ctx,
-		bson.M{"group_id": groupID},
+		bson.M{"participant_wallets": memberWallet},
 		options.Find().SetSort(bson.D{{Key: "closed_at", Value: -1}}),
 	)
 	if err != nil {
@@ -223,11 +219,16 @@ func (s *Store) ListArchivesByGroup(ctx context.Context, authUser auth.User, gro
 	return archives, nil
 }
 
-func (s *Store) FindArchiveByID(ctx context.Context, groupID string, archiveID string) (ArchiveSummary, error) {
+func (s *Store) FindArchiveByIDForWallet(ctx context.Context, authUser auth.User, archiveID string) (ArchiveSummary, error) {
+	memberWallet := normalizeWalletAddress(authUser.WalletAddress)
+	if memberWallet == "" {
+		return ArchiveSummary{}, errors.New("authenticated wallet address is invalid")
+	}
+
 	var archive ArchiveSummary
 	if err := s.cycleArchivesCollection.FindOne(ctx, bson.M{
-		"_id":      archiveID,
-		"group_id": groupID,
+		"_id":                 archiveID,
+		"participant_wallets": memberWallet,
 	}).Decode(&archive); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return ArchiveSummary{}, ErrCycleNotFound

@@ -174,6 +174,13 @@ func EnsureCollections(ctx context.Context, database *mongo.Database) error {
 			Keys:    bson.D{{Key: "archive_cid", Value: 1}},
 			Options: options.Index().SetName("cycle_archives_archive_cid_idx"),
 		},
+		{
+			Keys: bson.D{
+				{Key: "participant_wallets", Value: 1},
+				{Key: "closed_at", Value: -1},
+			},
+			Options: options.Index().SetName("cycle_archives_participant_closed_idx"),
+		},
 	})
 	if err != nil {
 		return fmt.Errorf("create cycle_archives indexes: %w", err)

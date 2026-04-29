@@ -56,8 +56,8 @@ func (s *Service) ListCycles(ctx context.Context, authUser auth.User, groupID st
 	return s.store.ListCyclesByGroup(ctx, authUser, strings.TrimSpace(groupID))
 }
 
-func (s *Service) ListArchives(ctx context.Context, authUser auth.User, groupID string) ([]ArchiveSummary, error) {
-	return s.store.ListArchivesByGroup(ctx, authUser, strings.TrimSpace(groupID))
+func (s *Service) ListArchives(ctx context.Context, authUser auth.User) ([]ArchiveSummary, error) {
+	return s.store.ListArchivesByWallet(ctx, authUser)
 }
 
 func (s *Service) CloseCycle(
@@ -124,6 +124,7 @@ func (s *Service) CloseCycle(
 		ArchiveMode:          "kubo-http",
 		ArchivePayloadSHA256: archivePayloadSHA256,
 		ClosedAt:             archiveSeed.ClosedAt,
+		ParticipantWallets:   archiveParticipantWallets(archiveSeed.Members),
 	}
 
 	if err := s.store.ArchiveAndDeleteCycle(ctx, archive); err != nil {
@@ -133,8 +134,8 @@ func (s *Service) CloseCycle(
 	return archive, nil
 }
 
-func (s *Service) GetArchiveSnapshot(ctx context.Context, groupID string, archiveID string) (ArchiveCycleSnapshot, error) {
-	archive, err := s.store.FindArchiveByID(ctx, strings.TrimSpace(groupID), strings.TrimSpace(archiveID))
+func (s *Service) GetArchiveSnapshot(ctx context.Context, authUser auth.User, archiveID string) (ArchiveCycleSnapshot, error) {
+	archive, err := s.store.FindArchiveByIDForWallet(ctx, authUser, strings.TrimSpace(archiveID))
 	if err != nil {
 		return ArchiveCycleSnapshot{}, err
 	}
@@ -173,4 +174,24 @@ func cycleCanClose(summary settlementPlan.Summary) bool {
 func payloadSHA256(rawSnapshot []byte) string {
 	hash := sha256.Sum256(rawSnapshot)
 	return hex.EncodeToString(hash[:])
+}
+
+func archiveParticipantWallets(members []ArchiveMember) []string {
+	wallets := make([]string, 0, len(members))
+	seenWallets := make(map[string]struct{}, len(members))
+
+	for _, member := range members {
+		walletAddress := strings.ToLower(strings.TrimSpace(member.WalletAddress))
+		if walletAddress == "" {
+			continue
+		}
+		if _, exists := seenWallets[walletAddress]; exists {
+			continue
+		}
+
+		seenWallets[walletAddress] = struct{}{}
+		wallets = append(wallets, walletAddress)
+	}
+
+	return wallets
 }

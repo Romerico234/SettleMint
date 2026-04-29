@@ -51,6 +51,7 @@ type ArchiveSummary struct {
 	ArchiveMode          string    `json:"archiveMode" bson:"archive_mode"`
 	ArchivePayloadSHA256 string    `json:"archivePayloadSha256" bson:"archive_payload_sha256"`
 	ClosedAt             time.Time `json:"closedAt" bson:"closed_at"`
+	ParticipantWallets   []string  `json:"-" bson:"participant_wallets,omitempty"`
 }
 
 type ArchiveMember struct {
