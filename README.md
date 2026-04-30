@@ -45,6 +45,8 @@ If the backend runs directly on your machine, use:
 SETTLEMENT_RPC_URL=http://127.0.0.1:8545
 ```
 
+Payment asset selection is centralized in `settlemint-chain/networks.ts`: `localhost` uses local Hardhat ETH, while production-like profiles use USDC. Switching profiles is the only payment-rail switch; the contract, frontend, and verifier read from that profile/default.
+
 ## Development Environment
 
 Install frontend dependencies:

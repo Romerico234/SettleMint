@@ -4,7 +4,7 @@ Smart contract sources, Hardhat configuration, and deployment scripts for Settle
 
 ## Network Configuration
 
-Contract network definitions are maintained in: [`settlemint-chain/networks.ts`](../settlemint-chain/networks.ts).
+Contract network definitions are maintained in: [`settlemint-chain/networks.ts`](../settlemint-chain/networks.ts). Payment asset definitions live there too. `localhost` uses native Hardhat ETH, and `polygon` uses native USDC.
 
 The contracts package uses three network keys:
 
@@ -12,11 +12,7 @@ The contracts package uses three network keys:
 - `amoy`
 - `polygon`
 
-The primary switch points are:
-
-- `settlemint-contracts/hardhat.config.ts`
-- `settlemint-contracts/.env.example`
-- `settlemint-chain/networks.ts`
+The network profile is the primary switch point: `settlemint-chain/networks.ts`.
 
 ## Environment Setup
 
