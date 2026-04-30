@@ -1,5 +1,19 @@
 export type ChainNetworkKey = "localhost" | "amoy" | "polygon";
 export type ChainNetworkStatus = "active" | "inactive";
+export type PaymentAsset =
+  | {
+      kind: "native";
+      symbol: string;
+      decimals: number;
+      label: string;
+    }
+  | {
+      kind: "erc20";
+      symbol: string;
+      decimals: number;
+      label: string;
+      tokenAddress: `0x${string}`;
+    };
 
 export type ChainNetworkProfile = {
   key: ChainNetworkKey;
@@ -15,6 +29,7 @@ export type ChainNetworkProfile = {
   };
   rpcUrl: string;
   explorerUrl: string | null;
+  paymentAsset: PaymentAsset;
 };
 
 export const chainNetworkProfiles: Record<ChainNetworkKey, ChainNetworkProfile> = {
@@ -32,6 +47,12 @@ export const chainNetworkProfiles: Record<ChainNetworkKey, ChainNetworkProfile> 
     },
     rpcUrl: "http://127.0.0.1:8545",
     explorerUrl: null,
+    paymentAsset: {
+      kind: "native",
+      symbol: "ETH",
+      decimals: 18,
+      label: "Local Hardhat ETH",
+    },
   },
   amoy: {
     key: "amoy",
@@ -47,6 +68,13 @@ export const chainNetworkProfiles: Record<ChainNetworkKey, ChainNetworkProfile> 
     },
     rpcUrl: "https://polygon-amoy.drpc.org",
     explorerUrl: "https://amoy.polygonscan.com",
+    paymentAsset: {
+      kind: "erc20",
+      symbol: "USDC",
+      decimals: 6,
+      label: "USDC",
+      tokenAddress: "0x0000000000000000000000000000000000000000",
+    },
   },
   polygon: {
     key: "polygon",
@@ -62,6 +90,13 @@ export const chainNetworkProfiles: Record<ChainNetworkKey, ChainNetworkProfile> 
     },
     rpcUrl: "https://polygon-rpc.com",
     explorerUrl: "https://polygonscan.com",
+    paymentAsset: {
+      kind: "erc20",
+      symbol: "USDC",
+      decimals: 6,
+      label: "USDC",
+      tokenAddress: "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
+    },
   },
 };
 
