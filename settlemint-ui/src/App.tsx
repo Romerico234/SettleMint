@@ -11,8 +11,10 @@ import CreateExpenseModal from "./components/expenses/CreateExpenseModal";
 import ExpensesTab from "./components/expenses/ExpensesTab";
 import SettlementPlanTab from "./components/settlement/SettlementPlanTab";
 import ArchiveTab from "./components/archive/ArchiveTab";
+import Home from "./components/home/Home";
 import { useAppRoute } from "./lib/appRoute";
 import { useAccountSession } from "./hooks/useAccountSession";
+import { useAuthenticatedAppRoute } from "./hooks/useAuthenticatedAppRoute";
 import { useGroupDirectory } from "./hooks/useGroupDirectory";
 import { useSettlementLedger } from "./hooks/useSettlementLedger";
 import { useSettlementPayments } from "./hooks/useSettlementPayments";
@@ -31,10 +33,10 @@ export default function App() {
 
   const {
     accessToken,
-    connectedWalletAddress,
     profile,
     profileSaving,
     authLoading,
+    sessionReady,
     walletError,
     walletAddress,
     signIn,
@@ -72,6 +74,15 @@ export default function App() {
   });
   const showSettlementCycleAction = groupDirectory.cycles.canCreate;
   const isArchiveTab = selectedTab === "Archive";
+  const isHomePage = selectedTab === "Home";
+  const isAuthenticated = Boolean(accessToken);
+
+  useAuthenticatedAppRoute({
+    isAuthenticated,
+    sessionReady,
+    selectedTab,
+    setSelectedTab,
+  });
 
   async function handleCloseCycle() {
     const archive = await groupDirectory.cycles.close();
@@ -85,6 +96,33 @@ export default function App() {
     groupDirectory.resetUiState();
     settlementLedger.resetUiState();
     settlementPayments.resetUiState();
+    setSelectedTab("Home");
+  }
+
+  if (!sessionReady) {
+    return (
+      <main className="app-loading-screen">
+        <div className="app-loading-card">
+          <div className="app-loading-title">Loading SettleMint</div>
+          <div className="app-loading-copy">Preparing your wallet session.</div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!isAuthenticated || isHomePage) {
+    return (
+      <Home
+        walletConnected={isAuthenticated}
+        walletAddress={walletAddress}
+        walletLoading={authLoading}
+        walletError={walletError}
+        profile={profile}
+        onWalletAction={signIn}
+        onDisconnect={handleSignOut}
+        onEnterDashboard={() => setSelectedTab("Overview")}
+      />
+    );
   }
 
   return (
@@ -155,13 +193,11 @@ export default function App() {
 
       <div className="app-shell">
         <Sidebar
-          walletConnected={Boolean(connectedWalletAddress)}
           walletAddress={walletAddress}
           walletLoading={authLoading}
           walletError={walletError}
           profile={profile}
           profileSaving={profileSaving}
-          onWalletAction={signIn}
           onDisconnect={handleSignOut}
           onSaveProfile={saveProfile}
           selectedTab={selectedTab}

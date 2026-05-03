@@ -16,13 +16,11 @@ import GroupsFilterMenu from "../groups/GroupsFilterMenu";
 import "./Sidebar.css";
 
 type SidebarProps = {
-  walletConnected: boolean;
   walletAddress: string | null;
   walletLoading: boolean;
   walletError: string | null;
   profile: UserProfile | null;
   profileSaving: boolean;
-  onWalletAction: () => Promise<void>;
   onDisconnect: () => Promise<void>;
   onSaveProfile: (input: { displayName: string }) => Promise<void>;
   selectedTab: Tab;
@@ -42,13 +40,11 @@ type SidebarProps = {
 const tabs: Tab[] = ["Overview", "Expenses", "Settlement Plan", "Archive"];
 
 export default function Sidebar({
-  walletConnected,
   walletAddress,
   walletLoading,
   walletError,
   profile,
   profileSaving,
-  onWalletAction,
   onDisconnect,
   onSaveProfile,
   selectedTab,
@@ -159,86 +155,72 @@ export default function Sidebar({
         <div className="sidebar-wallet-card">
           <div className="sidebar-wallet-status-row">
             <span
-              className={`sidebar-status-dot ${
-                walletConnected ? "connected" : "disconnected"
-              }`}
+              className="sidebar-status-dot connected"
             />
             <span className="sidebar-wallet-status-text">
-              {walletConnected ? "Connected" : "Not Connected"}
+              Connected
             </span>
           </div>
 
-          {walletConnected && (
-            <>
-              <div className="sidebar-display-name-row">
-                <div className="sidebar-display-name-copy">
-                  <div className="sidebar-display-name-label">Display Name</div>
-                  {!isEditingName && (
-                    <div className="sidebar-display-name-value">
-                      {profile?.displayName || "Add a display name"}
-                    </div>
-                  )}
-                </div>
-
-                {!isEditingName && (
-                  <button
-                    className="sidebar-inline-action"
-                    type="button"
-                    onClick={() => setIsEditingName(true)}
-                  >
-                    {profile?.displayName ? "Edit" : "Add"}
-                  </button>
-                )}
-              </div>
-
-              {isEditingName && (
-                <div className="sidebar-display-name-editor">
-                  <input
-                    className="sidebar-display-name-input"
-                    type="text"
-                    value={displayNameDraft}
-                    onChange={(event) => setDisplayNameDraft(event.target.value)}
-                    placeholder="Display name"
-                    maxLength={80}
-                  />
-                  <div className="sidebar-display-name-actions">
-                    <button
-                      className="sidebar-inline-action"
-                      type="button"
-                      onClick={() => {
-                        setDisplayNameDraft(profile?.displayName || "");
-                        setIsEditingName(false);
-                      }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      className="sidebar-inline-action sidebar-inline-action-primary"
-                      type="button"
-                      onClick={() => void handleSaveDisplayName()}
-                      disabled={profileSaving}
-                    >
-                      {profileSaving ? "Saving..." : "Save"}
-                    </button>
-                  </div>
+          <div className="sidebar-display-name-row">
+            <div className="sidebar-display-name-copy">
+              <div className="sidebar-display-name-label">Display Name</div>
+              {!isEditingName && (
+                <div className="sidebar-display-name-value">
+                  {profile?.displayName || "Add a display name"}
                 </div>
               )}
-            </>
+            </div>
+
+            {!isEditingName && (
+              <button
+                className="sidebar-inline-action"
+                type="button"
+                onClick={() => setIsEditingName(true)}
+              >
+                {profile?.displayName ? "Edit" : "Add"}
+              </button>
+            )}
+          </div>
+
+          {isEditingName && (
+            <div className="sidebar-display-name-editor">
+              <input
+                className="sidebar-display-name-input"
+                type="text"
+                value={displayNameDraft}
+                onChange={(event) => setDisplayNameDraft(event.target.value)}
+                placeholder="Display name"
+                maxLength={80}
+              />
+              <div className="sidebar-display-name-actions">
+                <button
+                  className="sidebar-inline-action"
+                  type="button"
+                  onClick={() => {
+                    setDisplayNameDraft(profile?.displayName || "");
+                    setIsEditingName(false);
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="sidebar-inline-action sidebar-inline-action-primary"
+                  type="button"
+                  onClick={() => void handleSaveDisplayName()}
+                  disabled={profileSaving}
+                >
+                  {profileSaving ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </div>
           )}
 
-          <div className="sidebar-wallet-address">{walletAddress || "MetaMask wallet required"}</div>
+          <div className="sidebar-wallet-address">{walletAddress || "Authenticated wallet unavailable"}</div>
 
-          {!walletConnected && (
-            <button className="btn btn-primary" onClick={() => void onWalletAction()} disabled={walletLoading}>
-              Connect Wallet
-            </button>
-          )}
-
-          {walletConnected && (
-            <button className="btn btn-secondary" onClick={() => void onDisconnect()} disabled={walletLoading}>
-              Sign out
-            </button>
-          )}
+          <button className="btn btn-secondary" onClick={() => void onDisconnect()} disabled={walletLoading}>
+            {walletLoading ? "Signing out..." : "Sign out"}
+          </button>
 
           {walletError && <p className="sidebar-wallet-error">{walletError}</p>}
         </div>
