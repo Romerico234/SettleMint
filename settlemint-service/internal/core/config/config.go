@@ -26,10 +26,19 @@ type Config struct {
 	SettlementRPCURL       string
 	SettlementChainID      int64
 	SettlementProofAddress string
+	SettlementPaymentAsset SettlementPaymentAsset
+}
+
+type SettlementPaymentAsset struct {
+	Kind         string
+	Symbol       string
+	Decimals     int
+	TokenAddress string
 }
 
 func Load() Config {
 	appEnv := loadEnvironment()
+	settlementNetwork := loadSettlementNetwork()
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -50,10 +59,11 @@ func Load() Config {
 		CORSAllowedOrigin:      corsAllowedOrigin,
 		IPFSAPIURL:             loadIPFSAPIURL(),
 		IPFSGatewayURL:         loadIPFSGatewayURL(),
-		SettlementNetwork:      loadSettlementNetwork(),
+		SettlementNetwork:      settlementNetwork,
 		SettlementRPCURL:       loadSettlementRPCURL(),
 		SettlementChainID:      loadSettlementChainID(),
 		SettlementProofAddress: loadSettlementProofAddress(),
+		SettlementPaymentAsset: loadSettlementPaymentAsset(settlementNetwork),
 	}
 }
 
@@ -92,6 +102,14 @@ func (c Config) Validate() error {
 
 	if c.SettlementProofAddress == "" {
 		return fmt.Errorf("SETTLEMENT_PROOF_ADDRESS is required")
+	}
+
+	if c.SettlementPaymentAsset.Kind != "native" && c.SettlementPaymentAsset.Kind != "erc20" {
+		return fmt.Errorf("SETTLEMENT_NETWORK has no supported settlement payment asset")
+	}
+
+	if c.SettlementPaymentAsset.Kind == "erc20" && c.SettlementPaymentAsset.TokenAddress == "" {
+		return fmt.Errorf("SETTLEMENT_NETWORK has no settlement token address")
 	}
 
 	return nil
@@ -200,4 +218,24 @@ func loadSettlementProofAddress() string {
 	}
 
 	return "0x5fbdb2315678afecb367f032d93f642f64180aa3"
+}
+
+func loadSettlementPaymentAsset(network string) SettlementPaymentAsset {
+	switch network {
+	case "localhost":
+		return SettlementPaymentAsset{
+			Kind:     "native",
+			Symbol:   "ETH",
+			Decimals: 18,
+		}
+	case "polygon":
+		return SettlementPaymentAsset{
+			Kind:         "erc20",
+			Symbol:       "USDC",
+			Decimals:     6,
+			TokenAddress: "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
+		}
+	default:
+		return SettlementPaymentAsset{}
+	}
 }

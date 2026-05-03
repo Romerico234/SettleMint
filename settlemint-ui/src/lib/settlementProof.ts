@@ -1,14 +1,25 @@
-const recordSettlementPaymentSelector = "0x45d5d040";
+const recordSettlementPaymentSelector = "0xe4164dcd";
+const approveSelector = "0x095ea7b3";
 
 export async function buildRecordSettlementPaymentCallData(input: {
   cycleId: string;
   obligationId: string;
   payeeWallet: string;
+  amountBaseUnits: bigint;
 }) {
   return `${recordSettlementPaymentSelector}${stripHexPrefix(
     await hashStringToBytes32(input.cycleId),
   )}${stripHexPrefix(await hashStringToBytes32(input.obligationId))}${encodeAddress(
     input.payeeWallet,
+  )}${encodeUint256(input.amountBaseUnits)}` as `0x${string}`;
+}
+
+export function buildApproveCallData(input: {
+  spender: string;
+  amountBaseUnits: bigint;
+}) {
+  return `${approveSelector}${encodeAddress(input.spender)}${encodeUint256(
+    input.amountBaseUnits,
   )}` as `0x${string}`;
 }
 
@@ -27,6 +38,14 @@ function encodeAddress(address: string) {
   }
 
   return normalizedAddress.padStart(64, "0");
+}
+
+function encodeUint256(value: bigint) {
+  if (value < 0n) {
+    throw new Error("Settlement amount is invalid.");
+  }
+
+  return value.toString(16).padStart(64, "0");
 }
 
 function stripHexPrefix(value: string) {

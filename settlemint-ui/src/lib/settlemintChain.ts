@@ -1,6 +1,7 @@
 import {
   chainNetworkProfiles,
   defaultChainNetworkKey,
+  type PaymentAsset,
   resolveChainNetworkKey,
 } from "../../../settlemint-chain/networks";
 
@@ -16,6 +17,7 @@ type SettleMintChainConfig = {
     symbol: string;
     decimals: number;
   };
+  paymentAsset: PaymentAsset;
   rpcUrls: string[];
   blockExplorerUrls: string[];
   settlementProofAddress: string;
@@ -35,6 +37,7 @@ export const settlemintChain: SettleMintChainConfig = {
   chainIdHex: `0x${selectedProfile.chainId.toString(16)}`,
   chainName: selectedProfile.chainName,
   nativeCurrency: selectedProfile.nativeCurrency,
+  paymentAsset: selectedProfile.paymentAsset,
   rpcUrls: selectedProfile.rpcUrl ? [selectedProfile.rpcUrl] : [],
   blockExplorerUrls: selectedProfile.explorerUrl ? [selectedProfile.explorerUrl] : [],
   settlementProofAddress:
@@ -52,11 +55,16 @@ export function buildSettlementTransactionUrl(transactionHash: string) {
 }
 
 export function isSettlementPaymentConfigured() {
-  return settlemintChain.status === "active" && Boolean(settlemintChain.settlementProofAddress);
+  return (
+    settlemintChain.status === "active" &&
+    Boolean(settlemintChain.settlementProofAddress) &&
+    (settlemintChain.paymentAsset.kind === "native" ||
+      settlemintChain.paymentAsset.tokenAddress !== "0x0000000000000000000000000000000000000000")
+  );
 }
 
 export function getSettlementRailLabel() {
-  return `${settlemintChain.chainName} · ${settlemintChain.nativeCurrency.symbol} native currency`;
+  return `${settlemintChain.chainName} · ${settlemintChain.paymentAsset.label}`;
 }
 
 export function getSettlementPaymentSetupMessage() {
@@ -66,6 +74,12 @@ export function getSettlementPaymentSetupMessage() {
   if (!settlemintChain.settlementProofAddress) {
     return `Set VITE_SETTLEMENT_PROOF_ADDRESS to the deployed SettlementProof contract address before using wallet payments.`;
   }
+  if (
+    settlemintChain.paymentAsset.kind === "erc20" &&
+    settlemintChain.paymentAsset.tokenAddress === "0x0000000000000000000000000000000000000000"
+  ) {
+    return `Set the ${settlemintChain.chainName} USDC token address in settlemint-chain/networks.ts before using wallet payments.`;
+  }
 
-  return `Wallet payments will use ${settlemintChain.nativeCurrency.symbol} on ${settlemintChain.chainName}.`;
+  return `Wallet payments will use ${settlemintChain.paymentAsset.symbol} on ${settlemintChain.chainName}.`;
 }

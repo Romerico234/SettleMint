@@ -11,10 +11,10 @@ import {
   fetchNativeUsdQuote,
   formatNativeBaseUnits,
   quoteUsdAmountToNativeBaseUnits,
+  usdAmountToFixedAssetBaseUnits,
 } from "../lib/nativeUsdQuote";
-import { buildRecordSettlementPaymentCallData } from "../lib/settlementProof";
+import { buildApproveCallData, buildRecordSettlementPaymentCallData } from "../lib/settlementProof";
 import {
-  getNativeBalance,
   requestWalletAccess,
   sendTransaction,
   switchOrAddChain,
@@ -112,43 +112,33 @@ export function useSettlementPayments({
       }
 
       await switchOrAddChain(connectedWallet, settlemintChain);
-      const quote = await fetchNativeUsdQuote();
+      const paymentAsset = settlemintChain.paymentAsset;
+      const paymentQuote = await buildPaymentQuote(repaymentBlock.amount);
+      const settlementAmount = BigInt(paymentQuote.nativeAmountBaseUnits);
 
-      const settlementAmount = quoteUsdAmountToNativeBaseUnits(
-        repaymentBlock.amount,
-        quote.usdPerNative,
-        settlemintChain.nativeCurrency.decimals,
-      );
-      const nativeAmountDisplay = formatNativeBaseUnits(
-        settlementAmount,
-        settlemintChain.nativeCurrency.decimals,
-      );
-      const payerBalanceBefore = await getNativeBalance(connectedWallet, connectedWallet.address);
-      const payeeBalanceBefore = await getNativeBalance(
-        connectedWallet,
-        repaymentBlock.toWalletAddress,
-      );
+      if (paymentAsset.kind === "erc20") {
+        const approvalHash = await sendTransaction(connectedWallet, {
+          from: connectedWallet.address,
+          to: paymentAsset.tokenAddress,
+          data: buildApproveCallData({
+            spender: settlemintChain.settlementProofAddress,
+            amountBaseUnits: settlementAmount,
+          }),
+        });
+        await waitForTransactionReceipt(connectedWallet, approvalHash);
+      }
 
       const transactionHash = await sendTransaction(connectedWallet, {
         from: connectedWallet.address,
         to: settlemintChain.settlementProofAddress,
-        value: settlementAmount,
+        value: paymentAsset.kind === "native" ? settlementAmount : undefined,
         data: await buildRecordSettlementPaymentCallData({
           cycleId: selectedCycle.id,
           obligationId: repaymentBlock.settlementSignature,
           payeeWallet: repaymentBlock.toWalletAddress,
+          amountBaseUnits: settlementAmount,
         }),
       });
-
-      const paymentQuote: NativePaymentQuote = {
-        nativeAmountDisplay,
-        nativeAmountBaseUnits: settlementAmount.toString(),
-        nativeSymbol: settlemintChain.nativeCurrency.symbol,
-        usdPerNative: quote.usdPerNative,
-        sourceLabel: quote.sourceLabel,
-        fetchedAtMs: quote.fetchedAtMs,
-        fetchedAt: new Date(quote.fetchedAtMs).toISOString(),
-      };
 
       await submitSettlementPayment(selectedCycle.groupId, selectedCycle.id, {
         payerWallet: repaymentBlock.fromWalletAddress,
@@ -166,8 +156,6 @@ export function useSettlementPayments({
         repaymentBlock,
         transactionHash,
         paymentQuote,
-        payerBalanceBefore,
-        payeeBalanceBefore,
         connectedWallet,
       });
     } catch (error) {
@@ -192,9 +180,45 @@ export function useSettlementPayments({
     paymentConfigured: isSettlementPaymentConfigured(),
     paymentSetupMessage: getSettlementPaymentSetupMessage(),
     paymentRailLabel: getSettlementRailLabel(),
-    paymentAssetSymbol: settlemintChain.nativeCurrency.symbol,
+    paymentAssetSymbol: settlemintChain.paymentAsset.symbol,
     paySettlement,
     resetUiState,
+  };
+}
+
+async function buildPaymentQuote(usdAmount: number): Promise<NativePaymentQuote> {
+  const paymentAsset = settlemintChain.paymentAsset;
+
+  if (paymentAsset.kind === "native") {
+    const quote = await fetchNativeUsdQuote();
+    const amountBaseUnits = quoteUsdAmountToNativeBaseUnits(
+      usdAmount,
+      quote.usdPerNative,
+      paymentAsset.decimals,
+    );
+
+    return {
+      nativeAmountDisplay: formatNativeBaseUnits(amountBaseUnits, paymentAsset.decimals),
+      nativeAmountBaseUnits: amountBaseUnits.toString(),
+      nativeSymbol: paymentAsset.symbol,
+      usdPerNative: quote.usdPerNative,
+      sourceLabel: quote.sourceLabel,
+      fetchedAtMs: quote.fetchedAtMs,
+      fetchedAt: new Date(quote.fetchedAtMs).toISOString(),
+    };
+  }
+
+  const fetchedAtMs = Date.now();
+  const amountBaseUnits = usdAmountToFixedAssetBaseUnits(usdAmount, paymentAsset.decimals);
+
+  return {
+    nativeAmountDisplay: formatNativeBaseUnits(amountBaseUnits, paymentAsset.decimals, 2),
+    nativeAmountBaseUnits: amountBaseUnits.toString(),
+    nativeSymbol: paymentAsset.symbol,
+    usdPerNative: 1,
+    sourceLabel: "Stablecoin face value",
+    fetchedAtMs,
+    fetchedAt: new Date(fetchedAtMs).toISOString(),
   };
 }
 
@@ -367,8 +391,6 @@ async function logPaymentDebugAsync(input: {
   repaymentBlock: RepaymentBlock;
   transactionHash: string;
   paymentQuote: NativePaymentQuote;
-  payerBalanceBefore: bigint;
-  payeeBalanceBefore: bigint;
   connectedWallet: NonNullable<Awaited<ReturnType<typeof requestWalletAccess>>>;
 }) {
   const logHeader = `[SettleMint Payment] ${input.repaymentBlock.fromDisplayName || input.repaymentBlock.fromWalletAddress} -> ${input.repaymentBlock.toDisplayName || input.repaymentBlock.toWalletAddress}`;
@@ -388,10 +410,6 @@ async function logPaymentDebugAsync(input: {
       nativeAmountDisplay: `${input.paymentQuote.nativeAmountDisplay} ${input.paymentQuote.nativeSymbol}`,
       nativeAmountBaseUnits: input.paymentQuote.nativeAmountBaseUnits,
     },
-    balances: {
-      payerBefore: `${formatNativeBaseUnits(input.payerBalanceBefore, settlemintChain.nativeCurrency.decimals)} ${input.paymentQuote.nativeSymbol}`,
-      payeeBefore: `${formatNativeBaseUnits(input.payeeBalanceBefore, settlemintChain.nativeCurrency.decimals)} ${input.paymentQuote.nativeSymbol}`,
-    },
   });
   console.groupEnd();
 
@@ -400,14 +418,6 @@ async function logPaymentDebugAsync(input: {
       input.connectedWallet,
       input.transactionHash as `0x${string}`,
     );
-    const payerBalanceAfter = await getNativeBalance(
-      input.connectedWallet,
-      input.connectedWallet.address,
-    );
-    const payeeBalanceAfter = await getNativeBalance(
-      input.connectedWallet,
-      input.repaymentBlock.toWalletAddress,
-    );
 
     console.groupCollapsed(logHeader);
     console.log({
@@ -415,12 +425,6 @@ async function logPaymentDebugAsync(input: {
       repaymentBlockID: input.repaymentBlock.blockId,
       transactionHash: input.transactionHash,
       receiptFound: Boolean(transactionReceipt),
-      balances: {
-        payerBefore: `${formatNativeBaseUnits(input.payerBalanceBefore, settlemintChain.nativeCurrency.decimals)} ${input.paymentQuote.nativeSymbol}`,
-        payerAfter: `${formatNativeBaseUnits(payerBalanceAfter, settlemintChain.nativeCurrency.decimals)} ${input.paymentQuote.nativeSymbol}`,
-        payeeBefore: `${formatNativeBaseUnits(input.payeeBalanceBefore, settlemintChain.nativeCurrency.decimals)} ${input.paymentQuote.nativeSymbol}`,
-        payeeAfter: `${formatNativeBaseUnits(payeeBalanceAfter, settlemintChain.nativeCurrency.decimals)} ${input.paymentQuote.nativeSymbol}`,
-      },
     });
     console.groupEnd();
   } catch (error) {

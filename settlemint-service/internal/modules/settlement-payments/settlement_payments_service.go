@@ -20,8 +20,11 @@ import (
 )
 
 const (
-	recordSettlementPaymentSelector = "45d5d040"
+	paymentAssetKindNative          = "native"
+	paymentAssetKindERC20           = "erc20"
+	recordSettlementPaymentSelector = "e4164dcd"
 	settlementRecordedTopic         = "0x10141f784d84c0d2af8353180f370f51d9218107ded9d95d65be2b5c552cb605"
+	erc20TransferTopic              = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 )
 
 var (
@@ -44,6 +47,8 @@ type Service struct {
 	rpcURL                 string
 	chainID                *big.Int
 	settlementProofAddress string
+	paymentAssetKind       string
+	paymentTokenAddress    string
 }
 
 func NewService(store *Store, plan *settlementplan.Service, cfg config.Config) *Service {
@@ -54,6 +59,8 @@ func NewService(store *Store, plan *settlementplan.Service, cfg config.Config) *
 		rpcURL:                 strings.TrimSpace(cfg.SettlementRPCURL),
 		chainID:                big.NewInt(cfg.SettlementChainID),
 		settlementProofAddress: normalizeWalletAddress(cfg.SettlementProofAddress),
+		paymentAssetKind:       strings.TrimSpace(strings.ToLower(cfg.SettlementPaymentAsset.Kind)),
+		paymentTokenAddress:    normalizeWalletAddress(cfg.SettlementPaymentAsset.TokenAddress),
 	}
 }
 
@@ -264,20 +271,20 @@ func (s *Service) verifyPaymentOnChain(ctx context.Context, payment Payment) ver
 		}
 	}
 
-	expectedValue, ok := new(big.Int).SetString(payment.NativeAmountBaseUnits, 10)
-	if !ok || expectedValue.Sign() <= 0 {
+	expectedAmount, ok := new(big.Int).SetString(payment.NativeAmountBaseUnits, 10)
+	if !ok || expectedAmount.Sign() <= 0 {
 		return verificationResult{
 			Status:  PaymentStatusRejected,
-			Message: "expected native transfer amount is invalid",
+			Message: "expected settlement amount is invalid",
 		}
 	}
-	if transaction.Value().Cmp(expectedValue) != 0 {
+	if err := s.verifyTransactionAmount(transaction, receipt, payment, expectedAmount); err != nil {
 		return verificationResult{
 			Status:  PaymentStatusRejected,
-			Message: fmt.Sprintf("native transfer amount mismatch: expected %s, got %s", expectedValue.String(), transaction.Value().String()),
+			Message: err.Error(),
 		}
 	}
-	if err := verifySettlementProofCall(transaction.Data(), payment.PayeeWallet); err != nil {
+	if err := verifySettlementProofCall(transaction.Data(), payment.PayeeWallet, expectedAmount); err != nil {
 		return verificationResult{
 			Status:  PaymentStatusRejected,
 			Message: err.Error(),
@@ -296,8 +303,31 @@ func (s *Service) verifyPaymentOnChain(ctx context.Context, payment Payment) ver
 	}
 }
 
-func verifySettlementProofCall(data []byte, payeeWallet string) error {
-	if len(data) != 4+32+32+32 {
+func (s *Service) verifyTransactionAmount(transaction *types.Transaction, receipt *types.Receipt, payment Payment, expectedAmount *big.Int) error {
+	switch s.paymentAssetKind {
+	case paymentAssetKindNative:
+		if transaction.Value().Cmp(expectedAmount) != 0 {
+			return fmt.Errorf("native transfer amount mismatch: expected %s, got %s", expectedAmount.String(), transaction.Value().String())
+		}
+	case paymentAssetKindERC20:
+		if s.paymentTokenAddress == "" {
+			return errors.New("settlement payment token address is not configured")
+		}
+		if transaction.Value().Sign() != 0 {
+			return errors.New("token settlement transaction must not include native value")
+		}
+		if !receiptIncludesERC20Transfer(receipt, s.paymentTokenAddress, payment.PayerWallet, payment.PayeeWallet, expectedAmount) {
+			return errors.New("expected settlement token transfer was not found in receipt")
+		}
+	default:
+		return errors.New("settlement payment asset is not configured")
+	}
+
+	return nil
+}
+
+func verifySettlementProofCall(data []byte, payeeWallet string, expectedAmount *big.Int) error {
+	if len(data) != 4+32+32+32+32 {
 		return errors.New("SettlementProof call data has an unexpected size")
 	}
 	if common.Bytes2Hex(data[:4]) != recordSettlementPaymentSelector {
@@ -307,6 +337,11 @@ func verifySettlementProofCall(data []byte, payeeWallet string) error {
 	encodedPayee := common.BytesToAddress(data[4+32+32 : 4+32+32+32]).Hex()
 	if strings.ToLower(encodedPayee) != payeeWallet {
 		return errors.New("SettlementProof payee argument does not match obligation payee")
+	}
+
+	encodedAmount := new(big.Int).SetBytes(data[4+32+32+32 : 4+32+32+32+32])
+	if encodedAmount.Cmp(expectedAmount) != 0 {
+		return fmt.Errorf("SettlementProof amount mismatch: expected %s, got %s", expectedAmount.String(), encodedAmount.String())
 	}
 
 	return nil
@@ -321,6 +356,28 @@ func receiptIncludesSettlementRecord(receipt *types.Receipt, settlementProofAddr
 			continue
 		}
 		if strings.ToLower(logEntry.Topics[0].Hex()) == settlementRecordedTopic {
+			return true
+		}
+	}
+
+	return false
+}
+
+func receiptIncludesERC20Transfer(receipt *types.Receipt, tokenAddress string, payerWallet string, payeeWallet string, expectedAmount *big.Int) bool {
+	payerTopic := common.HexToHash(payerWallet)
+	payeeTopic := common.HexToHash(payeeWallet)
+
+	for _, logEntry := range receipt.Logs {
+		if strings.ToLower(logEntry.Address.Hex()) != tokenAddress {
+			continue
+		}
+		if len(logEntry.Topics) < 3 || strings.ToLower(logEntry.Topics[0].Hex()) != erc20TransferTopic {
+			continue
+		}
+		if logEntry.Topics[1] != payerTopic || logEntry.Topics[2] != payeeTopic {
+			continue
+		}
+		if new(big.Int).SetBytes(logEntry.Data).Cmp(expectedAmount) == 0 {
 			return true
 		}
 	}

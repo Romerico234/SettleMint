@@ -88,6 +88,15 @@ export function formatNativeBaseUnits(
   return trimmedFraction ? `${whole}.${trimmedFraction}` : whole.toString();
 }
 
+export function usdAmountToFixedAssetBaseUnits(usdAmount: number, decimals: number) {
+  const cents = BigInt(Math.round(usdAmount * 100));
+  if (cents <= 0n) {
+    throw new Error("A positive USD amount is required.");
+  }
+
+  return cents * 10n ** BigInt(decimals) / 100n;
+}
+
 function decimalStringToScaledInteger(value: string, scale: number) {
   const trimmedValue = value.trim();
   if (!trimmedValue) {

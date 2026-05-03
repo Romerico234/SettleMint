@@ -1,4 +1,4 @@
-export type Tab = "Overview" | "Expenses" | "Settlement Plan" | "Archive";
+export type Tab = "Overview" | "Expenses" | "Settlement Plan" | "Archive" | "Home";
 
 export type CycleStatus = "Active" | "Archived";
 
