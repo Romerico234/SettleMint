@@ -13,20 +13,12 @@ type HomeProps = {
   onEnterDashboard: () => void;
 };
 
-function shortenWalletAddress(address: string | null) {
-  if (!address) {
-    return "MetaMask wallet required";
-  }
-
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
-}
-
 export default function Home({
   walletConnected,
   walletAddress,
   walletLoading,
   walletError,
-  profile,
+  profile: _profile,
   onWalletAction,
   onDisconnect,
   onEnterDashboard,
@@ -119,6 +111,10 @@ export default function Home({
               </button>
             )}
           </div>
+
+          {walletConnected && walletAddress && (
+            <p className="home-wallet-help">Connected wallet: {walletAddress}</p>
+          )}
 
           {walletError && <p className="home-error">{walletError}</p>}
         </div>

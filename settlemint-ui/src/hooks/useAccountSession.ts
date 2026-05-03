@@ -21,6 +21,7 @@ export function useAccountSession() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileSaving, setProfileSaving] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
 
   const authenticatedWalletAddress = profile?.walletAddress || connectedWalletAddress;
@@ -29,10 +30,12 @@ export function useAccountSession() {
   useEffect(() => {
     if (!accessToken) {
       setProfile(null);
+      setSessionReady(true);
       return;
     }
 
     let mounted = true;
+    setSessionReady(false);
 
     Promise.all([fetchAuthenticatedUser(), fetchMyProfile()])
       .then(([, profileResult]) => {
@@ -42,14 +45,18 @@ export function useAccountSession() {
 
         setProfile(profileResult.profile);
         setConnectedWalletAddress(profileResult.profile.walletAddress || null);
+        setSessionReady(true);
       })
       .catch((error: Error) => {
         if (!mounted) {
           return;
         }
 
+        clearAuthToken();
+        setAccessToken(null);
         setProfile(null);
         setWalletError(formatErrorMessage(error, "Failed to load account"));
+        setSessionReady(true);
       });
 
     return () => {
@@ -102,10 +109,12 @@ export function useAccountSession() {
   async function signOut() {
     setAuthLoading(true);
     setWalletError(null);
+    await new Promise((resolve) => window.setTimeout(resolve, 650));
     clearAuthToken();
     setAccessToken(null);
     setProfile(null);
     setConnectedWalletAddress(null);
+    setSessionReady(true);
     setAuthLoading(false);
   }
 
@@ -129,6 +138,7 @@ export function useAccountSession() {
     profile,
     profileSaving,
     authLoading,
+    sessionReady,
     walletError,
     walletAddress,
     signIn,
