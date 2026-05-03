@@ -1,26 +1,5 @@
 # SettleMint UI
 
-Frontend for SettleMint.
+`settlemint-ui` is the frontend application for SettleMint. It handles the wallet-connected user experience for signing in, managing groups and settlement cycles, reviewing balances, and opening settlement payments.
 
-## Overview
-
-- Network definitions are shared with [`settlemint-chain/networks.ts`](../settlemint-chain/networks.ts).
-- The UI connects to the backend through `VITE_API_BASE_URL`.
-- The active blockchain profile is set with `VITE_SETTLEMENT_NETWORK`.
-
-## Setup
-
-```bash
-pnpm install
-```
-
-Copy `.env.example` to `.env`, then configure:
-
-- `VITE_API_BASE_URL`
-- `VITE_SETTLEMENT_NETWORK`
-
-## Development
-
-```bash
-pnpm run dev
-```
+For the full technical overview of how this package fits into the system, see [../docs/docs.md](../docs/docs.md).
