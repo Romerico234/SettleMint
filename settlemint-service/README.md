@@ -1,62 +1,32 @@
 # SettleMint Service
 
-Backend API for SettleMint. The service coordinates wallet-based authentication, MongoDB persistence, expense and cycle workflows, and backend-side integrations such as blockchain verification and IPFS/archive handling.
+Backend API for SettleMint.
 
-## Service Structure
+## Overview
 
-Top-level directories:
+- Handles wallet authentication, persistence, expense and cycle workflows, and backend integrations.
+- Main entrypoints live in `cmd`.
+- Application code lives in `internal`.
+- Feature modules follow `routehandler -> service -> datastore`.
+- MongoDB is used for persistence.
 
-- `cmd` → Executable entrypoints
-- `internal` → Application code
+## Structure
 
-Inside `internal`:
-- `app` → Composition root and module wiring
-- `core` → Shared config, database, and HTTP server infrastructure
-- `modules` → Feature modules 
-- `integrations` → Integration clients and types for blockchain and IPFS
+- `internal/app`: app wiring
+- `internal/core`: shared config, database, and server setup
+- `internal/modules`: feature modules
+- `internal/integrations`: blockchain and IPFS integrations
 
-Request flow:
-
-1. `cmd/api/main.go` loads config and starts the HTTP server
-2. `internal/app/app.go` connects to MongoDB and builds the application modules
-3. `internal/core/server/http_router.go` mounts all modules
-4. Each feature follows `routehandler -> service -> datastore`
-
-## Module Convention
-
-Feature module layout:
+Feature modules typically use:
 
 - `<feature>_types.go`
 - `<feature>_datastore.go`
 - `<feature>_service.go`
 - `<feature>_routehandler.go`
 
-Example:
+## Environment
 
-- `internal/modules/user/user_types.go`
-- `internal/modules/user/user_datastore.go`
-- `internal/modules/user/user_service.go`
-- `internal/modules/user/user_routehandler.go`
-
-This module structure keeps feature code consistent across the service.
-
-## Database
-
-The service uses MongoDB.
-
-Environment split:
-- local development: `settlemint_db_dev`
-- production: `settlemint_db_prod`
-
-## Environment Setup
-
-Copy the example file:
-
-```bash
-cp settlemint-service/.env.example settlemint-service/.env
-```
-
-Primary runtime settings:
+Copy `.env.example` to `.env`, then configure:
 
 - `APP_ENV`
 - `PORT`
@@ -69,86 +39,37 @@ Primary runtime settings:
 - `SETTLEMENT_CHAIN_ID`
 - `SETTLEMENT_PROOF_ADDRESS`
 
-Development notes:
+Common MongoDB values:
 
-- Docker Compose backend: `MONGODB_URI=mongodb://settlemint-mongo:27017`
-- Local backend against Docker Mongo: `MONGODB_URI=mongodb://localhost:27017`
+- Docker Compose backend: `mongodb://settlemint-mongo:27017`
+- Local backend with Docker Mongo: `mongodb://localhost:27017`
 
-## Docker Setup
+## Run
 
-`docker-compose.yml` starts:
-
-- `settlemint-mongo` → Local MongoDB for development
-- `settlemint-service` → The backend API container
-
-Mongo data is stored in a named Docker volume, so rebuilding the backend does not wipe the local database.
-
-Data is normally preserved across:
-
-- `docker compose up --build`
-- `docker compose restart`
-- `docker compose down`
-
-Data is removed only when the volume is explicitly removed, for example:
-
-```bash
-docker compose down -v
-```
-
-## Build And Run
-
-### Option 1: Run Everything In Docker
-
-From `settlemint-service`:
+Run everything in Docker:
 
 ```bash
 docker compose up --build -d
 ```
 
-The API is available at:
-
-```text
-http://localhost:8080
-```
-
-Stop the stack:
-
-```bash
-docker compose down
-```
-
-### Option 2: Mongo In Docker, Backend Local
-
-Start Mongo only:
+Run Mongo in Docker and the backend locally:
 
 ```bash
 docker compose up -d settlemint-mongo
-```
-
-Run the backend locally from `settlemint-service`:
-
-```bash
 go run ./cmd/api
 ```
 
-Use this setting in `.env` for this mode:
+The API is available at `http://localhost:8080`.
 
-```env
-MONGODB_URI=mongodb://localhost:27017
-```
+## Notes
 
-## Build Details
+- Mongo data is stored in a Docker volume and is usually preserved across normal restarts.
+- `docker compose down -v` removes the local Mongo volume.
+- Development and production typically use different Mongo database names.
 
-Build without Docker:
+## Build
 
 ```bash
 go build ./cmd/api
-```
-
-Run tests:
-
-```bash
 go test ./...
 ```
-
----

@@ -1,43 +1,20 @@
 # Scripts
 
-This directory contains utility scripts for SettleMint.
+Utility scripts for SettleMint live in this directory.
 
-## General Script Workflow
+## Overview
 
-Most scripts in this directory should be run from their own script folder instead of the repository root.
+- Run scripts from their own folder, not from the repository root.
+- Use the shared `scripts/.venv` environment for Python-based scripts.
+- Install dependencies from `scripts/requirements.txt`.
+- Check each script folder for script-specific usage details.
 
-```bash
-cd /Users/romericodavid/repos/SettleMint/scripts/<script-folder>
-```
-
-### 1. Create a virtual environment
-
-Use a shared virtual environment for repository-level scripts:
+## Typical Setup
 
 ```bash
+cd scripts/<script-folder>
 python3 -m venv ../.venv
-```
-
-### 2. Activate the virtual environment
-
-```bash
 source ../.venv/bin/activate
-```
-
-### 3. Install script dependencies
-
-```bash
 python3 -m pip install -r ../requirements.txt
+python3 <script-name>.py
 ```
-
-### 4. Run the script
-
-Run the script using the command format documented in that script's folder README.
-
-Examples:
-
-```bash
-python3 populate_dev_db.py
-```
-
----

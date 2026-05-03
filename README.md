@@ -1,116 +1,25 @@
 # SettleMint
 
-SettleMint is a group expense tracking and settlement app. Users connect an EVM wallet, create or join groups, track shared expenses, compute minimal wallet-to-wallet repayment plans, and submit settlement payments with repayment being on-chain.
+SettleMint is a group expense and settlement platform that combines shared-expense tracking with blockchain-backed settlement support. The project is designed to help groups record expenses, calculate repayment obligations, and manage settlement activity across a connected wallet-based flow.
 
-## Project Structure
+## Project Overview
 
-- `settlemint-ui`: React frontend
-- `settlemint-service`: Go backend API and MongoDB persistence
-- `settlemint-contracts`: Hardhat contracts, local chain, deployment scripts, and wallet bootstrap. 
-- `scripts`: local development helpers, including database seeding
-- `settlemint-chain`: shared chain/network rollout notes and network profiles
+SettleMint is organized into five main parts:
 
-## Prerequisites
+- `settlemint-ui`: the frontend experience
+- `settlemint-service`: the backend API and persistence layer
+- `settlemint-contracts`: the smart contracts and deployment tooling
+- `settlemint-chain`: the shared network configuration layer
+- `scripts`: development and maintenance helpers
 
-- Docker Desktop
-- Node.js and pnpm
-- Python 3
-- MongoDB Compass, optional but useful for inspecting local data
-- MetaMask or another injected EVM browser wallet
+## How It Works
 
-## Environment Variables
+At a high level, users connect an EVM wallet, participate in groups, track shared expenses, and move through settlement cycles. The platform calculates repayment outcomes and supports settlement flows that integrate with deployed blockchain infrastructure.
 
-Copy the example env files before running the app:
+## Current Development Scope
 
-```bash
-cp settlemint-service/.env.example settlemint-service/.env
-cp settlemint-ui/.env.example settlemint-ui/.env
-cp settlemint-contracts/.env.example settlemint-contracts/.env
-```
+The current branch is centered on local development. `localhost` is the active blockchain profile, while other supported network profiles remain present but inactive. The repository is structured so each package manages its own runtime details, while the root project ties the system together.
 
-For local contract payments, deploy `SettlementProof` and copy `contracts.settlementProof` from `settlemint-contracts/deployments/localhost.json` into:
+## Working In This Repository
 
-- `settlemint-service/.env` as `SETTLEMENT_PROOF_ADDRESS`
-- `settlemint-ui/.env` as `VITE_SETTLEMENT_PROOF_ADDRESS`
-
-If the backend runs in Docker while Hardhat runs on your host machine, use:
-
-```env
-SETTLEMENT_RPC_URL=http://host.docker.internal:8545
-```
-
-If the backend runs directly on your machine, use:
-
-```env
-SETTLEMENT_RPC_URL=http://127.0.0.1:8545
-```
-
-## Development Environment
-
-Install frontend dependencies:
-
-```bash
-cd settlemint-ui
-pnpm install
-```
-
-Install contract dependencies:
-
-```bash
-cd settlemint-contracts
-pnpm install
-```
-
-Prepare the Python helper environment for scripts:
-
-```bash
-cd scripts
-python3 -m venv .venv
-source .venv/bin/activate
-python3 -m pip install -r requirements.txt
-```
-
-Run the local blockchain:
-
-```bash
-cd settlemint-contracts
-pnpm run node
-```
-
-Deploy and bootstrap contracts in another terminal:
-
-```bash
-cd settlemint-contracts
-pnpm run deploy:localhost
-pnpm run bootstrap:localhost
-```
-
-Run MongoDB and the backend service in another terminal:
-
-```bash
-cd settlemint-service
-docker compose up --build -d
-```
-
-Seed the local database in another terminal:
-
-```bash
-cd scripts/populate-dev-db
-python3 populate_dev_db.py
-```
-
-Run the frontend in another terminal:
-
-```bash
-cd settlemint-ui
-pnpm run dev
-```
-
-## Mock Data
-
-The development environment seed data includes two groups, each with memberships and an empty active settlement cycle so local users can join and experiment immediately.
-
-- Towson Tigers: `inv_d71ba3645cbe9203`
-- Guyanaese Tigers: `inv_guyanaese_tigers`
-
-The seed script drops and recreates the local development database. Use it only against local data.
+Each package includes its own README for setup and usage details. The root repository serves as the top-level overview of the system and how the pieces relate to one another.

@@ -1,47 +1,42 @@
 # SettleMint Chain Rollout
 
-`localhost` is the only active blockchain profile in this branch.
+Only `localhost` is active in this branch.
 
-The full network registry lives in: [`settlemint-chain/networks.ts`](./networks.ts).
+## Overview
 
-`amoy` and `polygon` are still represented there, but they are currently inactive.
+- Network definitions live in [`networks.ts`](./networks.ts).
+- `amoy` and `polygon` are present but currently inactive.
+- Re-enabling a network requires updating its status, configuring env vars, redeploying contracts, and pointing the frontend to that network.
 
-## To Re-Enable Amoy Later
-
-1. Change the `amoy` profile status from `"inactive"` to `"active"` in `settlemint-chain/networks.ts`.
-2. Add `DEPLOYER_PRIVATE_KEY` and `AMOY_RPC_URL` to `settlemint-contracts/.env`.
-3. Deploy contracts with:
+## Re-Enable Amoy
 
 ```bash
 pnpm exec hardhat run scripts/deploy.ts --network amoy
 ```
 
-4. Set the frontend to:
-
 ```env
 VITE_SETTLEMENT_NETWORK=amoy
 ```
 
-5. Validate native `POL` wallet transfers and explorer links on Amoy.
+Also:
+- Set `amoy` to `"active"` in `settlemint-chain/networks.ts`
+- Add `DEPLOYER_PRIVATE_KEY` and `AMOY_RPC_URL` to `settlemint-contracts/.env`
+- Validate native `POL` transfers and explorer links
 
-## To Re-Enable Polygon Later
-
-1. Change the `polygon` profile status from `"inactive"` to `"active"` in `settlemint-chain/networks.ts`.
-2. Add `DEPLOYER_PRIVATE_KEY` and `POLYGON_RPC_URL` to `settlemint-contracts/.env`.
-3. Deploy contracts with:
+## Re-Enable Polygon
 
 ```bash
 pnpm exec hardhat run scripts/deploy.ts --network polygon
 ```
 
-4. Set the frontend to:
-
 ```env
 VITE_SETTLEMENT_NETWORK=polygon
 ```
 
-5. Finish the missing production pieces before using it:
-- backend tx-hash persistence
-- backend on-chain verification
-- cycle closure after verified settlements
-- production wallet/release process
+Also:
+- Set `polygon` to `"active"` in `settlemint-chain/networks.ts`
+- Add `DEPLOYER_PRIVATE_KEY` and `POLYGON_RPC_URL` to `settlemint-contracts/.env`
+- Complete backend tx-hash persistence
+- Complete backend on-chain verification
+- Complete cycle closure after verified settlements
+- Complete the production wallet and release process
