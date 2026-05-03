@@ -62,9 +62,13 @@ export default function Home({
             </div>
           </div>
         </div>
-
-        <button className="home-nav-link" type="button" onClick={onEnterDashboard}>
-          Dashboard
+        <button
+        className="home-nav-link"
+        type="button"
+        onClick={() => void handleConnectWallet()}
+        disabled={walletLoading}
+        >
+        {walletLoading ? "Getting Started..." : "Get Started"}
         </button>
       </nav>
 
@@ -73,14 +77,13 @@ export default function Home({
           <p className="home-eyebrow">SettleMint</p>
 
           <h1 className="home-title">
-            Settle shared expenses with proof on-chain.
+            Split expenses without the awkward follow-up.
           </h1>
 
           <p className="home-description">
-            SettleMint helps groups track shared expenses, calculate repayment
-            plans, and verify wallet-to-wallet settlements using blockchain
-            transaction proof. It is built for teams, classmates, roommates, and
-            communities that want a clearer way to handle shared costs.
+            SettleMint helps roommates, classmates, teams, and friend groups keep
+            shared expenses organized. Add costs, see who owes what, and get everyone
+            settled up with less confusion.
           </p>
 
           <div className="home-actions">
@@ -147,8 +150,8 @@ export default function Home({
 
           {!walletConnected && (
             <p className="home-wallet-help">
-              Connect MetaMask to access your groups, expenses, settlement
-              cycles, and repayment history.
+                Get started to view your groups, add expenses, and keep track of what has
+                been settled.
             </p>
           )}
         </aside>
@@ -156,30 +159,30 @@ export default function Home({
 
       <section className="home-feature-grid">
         <article className="home-feature-card">
-          <div className="home-feature-number">01</div>
-          <h2>Track group expenses</h2>
-          <p>
-            Create or join groups, add shared expenses, and keep everyone’s
-            balances organized in one place.
-          </p>
+        <div className="home-feature-number">01</div>
+        <h2>Add shared costs</h2>
+        <p>
+            Keep rent, trips, meals, supplies, and other group expenses in one
+            organized place.
+        </p>
         </article>
 
         <article className="home-feature-card">
-          <div className="home-feature-number">02</div>
-          <h2>Calculate repayments</h2>
-          <p>
-            Turn complicated group balances into a simpler settlement plan with
-            clear payer and payee relationships.
-          </p>
+        <div className="home-feature-number">02</div>
+        <h2>See who owes what</h2>
+        <p>
+            SettleMint helps turn messy group balances into a simple plan everyone
+            can understand.
+        </p>
         </article>
 
         <article className="home-feature-card">
-          <div className="home-feature-number">03</div>
-          <h2>Verify on-chain</h2>
-          <p>
-            Submit wallet-to-wallet payments and preserve blockchain proof for
-            transparent settlement records.
-          </p>
+        <div className="home-feature-number">03</div>
+        <h2>Keep clear records</h2>
+        <p>
+            Once payments are made, your group can keep a reliable record of what
+            was settled.
+        </p>
         </article>
       </section>
     </main>
