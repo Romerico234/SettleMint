@@ -11,6 +11,7 @@ import CreateExpenseModal from "./components/expenses/CreateExpenseModal";
 import ExpensesTab from "./components/expenses/ExpensesTab";
 import SettlementPlanTab from "./components/settlement/SettlementPlanTab";
 import ArchiveTab from "./components/archive/ArchiveTab";
+import Home from "./components/home/Home";
 import { useAppRoute } from "./lib/appRoute";
 import { useAccountSession } from "./hooks/useAccountSession";
 import { useGroupDirectory } from "./hooks/useGroupDirectory";
@@ -72,6 +73,7 @@ export default function App() {
   });
   const showSettlementCycleAction = groupDirectory.cycles.canCreate;
   const isArchiveTab = selectedTab === "Archive";
+  const isHomePage = selectedTab === "Home";
 
   async function handleCloseCycle() {
     const archive = await groupDirectory.cycles.close();
@@ -85,6 +87,10 @@ export default function App() {
     groupDirectory.resetUiState();
     settlementLedger.resetUiState();
     settlementPayments.resetUiState();
+  }
+
+  if (isHomePage) {
+    return <Home />;
   }
 
   return (

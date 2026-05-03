@@ -102,12 +102,12 @@ function tabFromPathname(pathname: string): Tab {
       return "Settlement Plan";
     case "/archive":
       return "Archive";
-    case "/home":
-      return "Home";
     case "/dashboard":
+      return "Overview";
+    case "/home":
     case "/":
     default:
-      return "Overview";
+      return "Home";
   }
 }
 
@@ -119,10 +119,10 @@ function pathnameForTab(tab: Tab) {
       return "/settlement-plan";
     case "Archive":
       return "/archive";
-    case "Home":
-      return "/home";
     case "Overview":
-    default:
       return "/dashboard";
+    case "Home":
+    default:
+      return "/home";
   }
 }
