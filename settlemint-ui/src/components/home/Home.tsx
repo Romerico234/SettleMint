@@ -58,7 +58,7 @@ export default function Home({
           <div>
             <div className="home-brand-title">SettleMint</div>
             <div className="home-brand-subtitle">
-              Verifiable group expense settlement
+              Shared expenses made simple
             </div>
           </div>
         </div>
