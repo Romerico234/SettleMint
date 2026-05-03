@@ -147,19 +147,19 @@ export default function Home({
 
         <article className="home-feature-card">
         <div className="home-feature-number">03</div>
-        <h2>Keep clear records</h2>
+        <h2>Pay expenses on-chain</h2>
         <p>
-            Once payments are made, your group can keep a reliable record of what
-            was settled.
+            Settle up directly through your wallet and keep a clear record of completed
+            payments.
         </p>
         </article>
 
         <article className="home-feature-card">
         <div className="home-feature-number">04</div>
-        <h2>Pay expenses on-chain</h2>
+        <h2>Keep clear records</h2>
         <p>
-            Settle up directly through your wallet and keep a clear record of completed
-            payments.
+            Once payments are made, your group can keep a reliable record of what
+            was settled.
         </p>
         </article>
       </section>
