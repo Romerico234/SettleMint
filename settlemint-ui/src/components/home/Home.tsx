@@ -123,38 +123,7 @@ export default function Home({
           {walletError && <p className="home-error">{walletError}</p>}
         </div>
 
-        <aside className="home-wallet-card">
-          <div className="home-card-label">Wallet Status</div>
 
-          <div className="home-wallet-status-row">
-            <span
-              className={`home-status-dot ${
-                walletConnected ? "connected" : "disconnected"
-              }`}
-            />
-            <span>{walletConnected ? "Connected" : "Not Connected"}</span>
-          </div>
-
-          <div className="home-wallet-address">
-            {shortenWalletAddress(walletAddress)}
-          </div>
-
-          {walletConnected && (
-            <div className="home-profile-box">
-              <div className="home-profile-label">Signed in as</div>
-              <div className="home-profile-name">
-                {profile?.displayName || "SettleMint user"}
-              </div>
-            </div>
-          )}
-
-          {!walletConnected && (
-            <p className="home-wallet-help">
-                Get started to view your groups, add expenses, and keep track of what has
-                been settled.
-            </p>
-          )}
-        </aside>
       </section>
 
       <section className="home-feature-grid">
@@ -182,6 +151,15 @@ export default function Home({
         <p>
             Once payments are made, your group can keep a reliable record of what
             was settled.
+        </p>
+        </article>
+
+        <article className="home-feature-card">
+        <div className="home-feature-number">04</div>
+        <h2>Pay expenses on-chain</h2>
+        <p>
+            Settle up directly through your wallet and keep a clear record of completed
+            payments.
         </p>
         </article>
       </section>
