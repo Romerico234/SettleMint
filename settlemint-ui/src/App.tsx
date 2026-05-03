@@ -91,8 +91,19 @@ export default function App() {
 
   // TODO: This is fine for just this part, but the home page should redirect the user to the dashboard once they connect their wallet
   if (isHomePage) {
-    return <Home />;
-  }
+  return (
+    <Home
+      walletConnected={Boolean(connectedWalletAddress)}
+      walletAddress={walletAddress}
+      walletLoading={authLoading}
+      walletError={walletError}
+      profile={profile}
+      onWalletAction={signIn}
+      onDisconnect={handleSignOut}
+      onEnterDashboard={() => setSelectedTab("Overview")}
+    />
+  );
+}
 
   return (
     <div className="app-page">
