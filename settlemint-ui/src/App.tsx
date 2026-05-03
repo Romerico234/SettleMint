@@ -89,6 +89,7 @@ export default function App() {
     settlementPayments.resetUiState();
   }
 
+  // TODO: This is fine for just this part, but the home page should redirect the user to the dashboard once they connect their wallet
   if (isHomePage) {
     return <Home />;
   }
